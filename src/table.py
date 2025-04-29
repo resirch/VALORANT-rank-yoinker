@@ -27,7 +27,7 @@ class Table:
         self.log = log
         self.rich_table = RichTable()
         self.col_flags = [
-            False,  # Party
+            True,  # Party
             True,  # Agent
             True,  # Name
             bool(config.table.get("skin", True)),  # Skin
@@ -92,12 +92,16 @@ class Table:
 
     def apply_rows(self):
         for row in self.rows:
-            row = [
-                self.ansi_to_console(str(v))
-                for i, v in row
-                if i in self.fields_to_display
-            ]
-            self.rich_table.add_row(*row)
+            processed_row = []
+            for col_name, value in row:
+                if col_name in self.fields_to_display:
+                    str_value = str(value)
+                    # Check if the value uses Rich markup (simple check)
+                    if col_name == "Party" and str_value.startswith("[") and str_value.endswith("]"):
+                        processed_row.append(str_value) # Pass Rich markup directly
+                    else:
+                        processed_row.append(self.ansi_to_console(str_value))
+            self.rich_table.add_row(*processed_row)
 
     def reset_runtime_col_flags(self):
         self.runtime_col_flags = self.col_flags[:]
