@@ -38,6 +38,9 @@ from src.account_manager.account_manager import AccountManager
 from src.account_manager.account_config import AccountConfig
 from src.account_manager.account_auth import AccountAuth
 
+# Import the new party finder function
+from src.party_finder import find_parties
+
 urllib3.disable_warnings(urllib3.exceptions.InsecureRequestWarning)
 
 os.system(f"title VALORANT rank yoinker v{version}")
@@ -92,8 +95,8 @@ try:
 
     ErrorSRC = Error(log, acc_manager)
 
-    Requests.check_version(version, Requests.copy_run_update_script)
-    Requests.check_status()
+    # Requests.check_version(version, Requests.copy_run_update_script)
+    # Requests.check_status()
     Requests = Requests(version, log, ErrorSRC)
 
     cfg = Config(log)
@@ -246,6 +249,16 @@ try:
                 Players = coregame_stats["Players"]
                 # data for chat to function
                 presence = presences.get_presence()
+
+                # --- Find Parties (Moved Before Loop) --- 
+                player_puuids = [player["Subject"] for player in Players]
+                # Create current team mapping for INGAME state
+                current_teams = {p['Subject']: p['TeamID'] for p in Players}
+                log(f"Player PUUIDs for party check: {player_puuids}")
+                # Pass current_teams to find_parties
+                party_assignments = find_parties(player_puuids, Requests, log, current_teams=current_teams)
+                # --- End Find Parties ---
+
                 partyMembers = menu.get_party_members(Requests.puuid, presence)
                 partyMembersList = [a["Subject"] for a in partyMembers]
 
@@ -374,21 +387,14 @@ try:
                                             }
                                         )
 
-                        party_icon = ""
-                        # set party premade icon
-                        for party in partyOBJ:
-                            if player["Subject"] in partyOBJ[party]:
-                                if party not in partyIcons:
-                                    partyIcons.update(
-                                        {party: PARTYICONLIST[partyCount]}
-                                    )
-                                    # PARTY_ICON
-                                    party_icon = PARTYICONLIST[partyCount]
-                                    partyNum = partyCount + 1
-                                    partyCount += 1
-                                else:
-                                    # PARTY_ICON
-                                    party_icon = partyIcons[party]
+                        # Assign party icon based on the assignments from party_finder
+                        assignment = party_assignments.get(player["Subject"])
+                        if assignment:
+                            number_str, color_hex = assignment
+                            party_icon = f"[{color_hex}]{number_str}[/]"
+                        else:
+                            party_icon = ""
+
                         playerRank = rank.get_rank(player["Subject"], seasonID)
                         previousPlayerRank = rank.get_rank(
                             player["Subject"], previousSeasonID
@@ -514,6 +520,9 @@ try:
                             + f" ({playerRank['numberofgames']})"
                         )
 
+                        # PARTY ICON
+                        party_color = party_icon
+
                         if int(leaderboard) > 0:
                             is_leaderboard_needed = True
 
@@ -542,7 +551,6 @@ try:
                         heartbeat_data["players"][player["Subject"]] = {
                             "puuid": player["Subject"],
                             "name": names[player["Subject"]],
-                            "partyNumber": partyNum if party_icon != "" else 0,
                             "agent": agent_dict[player["CharacterID"].lower()],
                             "rank": playerRank["rank"],
                             "peakRank": playerRank["peakrank"],
@@ -592,7 +600,16 @@ try:
                 if pregame_stats == None:
                     continue
                 Players = pregame_stats["AllyTeam"]["Players"]
+
+                # --- Find Parties (Moved Before Loop) --- 
+                player_puuids = [player["Subject"] for player in Players]
+                log(f"Player PUUIDs for party check: {player_puuids}")
+                # Do NOT pass current_teams in PREGAME
+                party_assignments = find_parties(player_puuids, Requests, log)
+                # --- End Find Parties ---
+
                 presences.wait_for_presence(namesClass.get_players_puuid(Players))
+                log(f"presences found: {[player['Subject'] for player in Players]}")
                 names = namesClass.get_names_from_puuids(Players)
                 # temporary until other regions gets fixed?
                 # loadouts = loadoutsClass.get_match_loadouts(pregame.get_pregame_match_id(), pregame_stats, cfg.weapon, valoApiSkins, names,
@@ -620,7 +637,19 @@ try:
                             f"Loading players... [{playersLoaded}/{len(Players)}]"
                         )
                         playersLoaded += 1
-                        party_icon = ""
+                        # Assign party icon based on the assignments from party_finder
+                        assignment = party_assignments.get(player["Subject"])
+                        if assignment:
+                            number_str, color_hex = assignment
+                            party_icon = f"[{color_hex}]{number_str}[/]"
+                        else:
+                            party_icon = ""
+
+                        # --- Find Parties (Removed from here) ---
+                        # player_puuids = [player["Subject"] for player in Players]
+                        # log(f"Player PUUIDs for party check: {player_puuids}")
+                        # party_assignments = find_parties(player_puuids, Requests, log)
+                        # --- End Find Parties ---
 
                         # set party premade icon
                         for party in partyOBJ:
@@ -768,6 +797,9 @@ try:
                             + f" ({playerRank['numberofgames']})"
                         )
 
+                        # PARTY ICON
+                        party_color = party_icon
+
                         if int(leaderboard) > 0:
                             is_leaderboard_needed = True
 
@@ -796,7 +828,6 @@ try:
 
                         heartbeat_data["players"][player["Subject"]] = {
                             "name": names[player["Subject"]],
-                            "partyNumber": partyNum if party_icon != "" else 0,
                             "agent": agent_dict[player["CharacterID"].lower()],
                             "rank": playerRank["rank"],
                             "peakRank": playerRank["peakrank"],
@@ -813,6 +844,14 @@ try:
                 already_played_with = []
                 Players = menu.get_party_members(Requests.puuid, presence)
                 names = namesClass.get_names_from_puuids(Players)
+
+                # --- Find Parties (Moved Before Loop) --- 
+                player_puuids = [player["Subject"] for player in Players]
+                log(f"Player PUUIDs for party check: {player_puuids}")
+                # Do NOT pass current_teams in MENUS
+                party_assignments = find_parties(player_puuids, Requests, log)
+                # --- End Find Parties ---
+
                 playersLoaded = 1
                 with richConsole.status("Loading Players...") as status:
                     # with alive_bar(total=len(Players), title='Fetching Players', bar='classic2') as bar:
@@ -831,7 +870,13 @@ try:
                                 f"Loading players... [{playersLoaded}/{len(Players)}]"
                             )
                             playersLoaded += 1
-                            party_icon = PARTYICONLIST[0]
+                            # Assign party icon based on the assignments from party_finder
+                            assignment = party_assignments.get(player["Subject"])
+                            if assignment:
+                                number_str, color_hex = assignment
+                                party_icon = f"[{color_hex}]{number_str}[/]"
+                            else:
+                                party_icon = ""
                             playerRank = rank.get_rank(player["Subject"], seasonID)
                             previousPlayerRank = rank.get_rank(
                                 player["Subject"], previousSeasonID
@@ -917,6 +962,9 @@ try:
                                 + f" ({playerRank['numberofgames']})"
                             )
 
+                            # PARTY ICON
+                            party_color = party_icon
+
                             if int(leaderboard) > 0:
                                 is_leaderboard_needed = True
 
@@ -967,14 +1015,11 @@ try:
                     table.set_runtime_col_flag("Pos.", False)
 
                 if game_state == "MENUS":
-                    table.set_runtime_col_flag("Party", False)
                     table.set_runtime_col_flag("Agent", False)
                     table.set_runtime_col_flag("Skin", False)
 
-                if game_state == "INGAME":
-                    if isRange:
-                        table.set_runtime_col_flag("Party", False)
-                        table.set_runtime_col_flag("Agent", False)
+                if game_state == "INGAME" and isRange:
+                    table.set_runtime_col_flag("Agent", False)
 
                 # We don't to show the RR column if the "aggregate_rank_rr" feature flag is True.
                 table.set_runtime_col_flag(
