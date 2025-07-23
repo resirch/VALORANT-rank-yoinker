@@ -338,14 +338,20 @@ try:
                                         ):
                                             times += 1
                                             m_set += (m["match_id"],)
-                                    if player["PlayerIdentity"]["Incognito"] == False:
+                                    if player["PlayerIdentity"]["Incognito"] == False or not hide_names:
+                                        # Check if the name has changed since last played
+                                        current_name = names[player["Subject"]]
+                                        old_name = curr_player_stat["name"]
+                                        if current_name != old_name:
+                                            display_name = f"{old_name} (now {current_name})"
+                                        else:
+                                            display_name = old_name
                                         already_played_with.append(
                                             {
                                                 "times": times,
-                                                "name": curr_player_stat["name"],
+                                                "name": display_name,
                                                 "agent": curr_player_stat["agent"],
-                                                "time_diff": time.time()
-                                                - curr_player_stat["epoch"],
+                                                "time_diff": time.time() - curr_player_stat["epoch"],
                                             }
                                         )
                                     else:
