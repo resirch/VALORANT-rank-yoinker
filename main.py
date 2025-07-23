@@ -341,7 +341,7 @@ try:
                                     # if curr_player_stat["match_id"] == coregame.match_id and len(stats_data[player["Subject"]]) > 1:
                                     curr_player_stat = stats_data[player["Subject"]][-i]
                                 if curr_player_stat["match_id"] != coregame.match_id:
-                                    # checking for party memebers and self players
+                                    # checking for party members and self players
                                     times = 0
                                     m_set = ()
                                     for m in stats_data[player["Subject"]]:
