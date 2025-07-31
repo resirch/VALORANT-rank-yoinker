@@ -1,5 +1,6 @@
 import json
 import requests
+import os
 from src.constants import hide_names  # import the global flag
 
 
@@ -13,43 +14,32 @@ class Names:
         # Returns a placeholder if names are to be hidden.
         return "Player"
 
+    def get_stats_data(self):
+        try:
+            with open(os.path.join(os.getenv('APPDATA'), "vry/stats.json"), "r") as f:
+                return json.load(f)
+        except (FileNotFoundError, json.JSONDecodeError):
+            return {}
+
     def check_and_update_name(self, puuid, current_name, force_show=False):
         # If force_show is True, ignore any stored value and update with current full name.
         if force_show:
-            try:
-                with open("previous_names.json", "r") as f:
-                    prev_names = json.load(f)
-            except (FileNotFoundError, json.JSONDecodeError):
-                prev_names = {}
-            # Always update stored value with the full name.
-            prev_names[puuid] = current_name
-            with open("previous_names.json", "w") as f:
-                json.dump(prev_names, f)
             return current_name
 
-        # Load previously recorded names from file.
-        try:
-            with open("previous_names.json", "r") as f:
-                prev_names = json.load(f)
-        except (FileNotFoundError, json.JSONDecodeError):
-            prev_names = {}
-
+        # Load stats data to get previous names
+        stats_data = self.get_stats_data()
+        
         # If we've seen this player before, compare names.
-        if puuid in prev_names:
-            old_name = prev_names[puuid]
-            if old_name != current_name:
-                # Update stored value and indicate the name change.
-                prev_names[puuid] = current_name
-                with open("previous_names.json", "w") as f:
-                    json.dump(prev_names, f)
-                return f"{old_name} -> {current_name}"
+        if puuid in stats_data and len(stats_data[puuid]) > 0:
+            # Get the most recent entry for this player
+            latest_entry = stats_data[puuid][-1]
+            old_name = latest_entry.get("name", "")
+            
+            if old_name != current_name and old_name != "":
+                return f"{old_name} (now {current_name})"
             else:
                 return current_name
         else:
-            # New entry: store the current name.
-            prev_names[puuid] = current_name
-            with open("previous_names.json", "w") as f:
-                json.dump(prev_names, f)
             return current_name
 
     def get_name_from_puuid(self, puuid, force_show=False):
