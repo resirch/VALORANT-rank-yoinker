@@ -35,6 +35,9 @@ class Names:
             latest_entry = stats_data[puuid][-1]
             old_name = latest_entry.get("name", "")
             
+            if "(now " in old_name:
+                old_name = old_name.split(" (now ")[0]
+            
             if old_name != current_name and old_name != "":
                 return f"{old_name} (now {current_name})"
             else:
