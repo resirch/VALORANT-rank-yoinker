@@ -59,7 +59,7 @@ def get_recent_match_history(puuid, Requests_obj, log_func, retries=2, backoff_f
 def find_parties(puuids: list[str], Requests_obj, log_func, current_teams: dict[str, str] | None = None) -> dict[str, tuple[str, str]]:
     """
     Identifies parties based on shared recent match history 
-    (at least 2 shared matches in the last 5 retrieved from competitiveupdates endpoint).
+    (at least 4 shared matches in the last 5 retrieved from competitiveupdates endpoint).
     If current_teams is provided (for INGAME state), it also ensures members are on the same current team.
     Returns a dictionary mapping PUUIDs to their assigned party tuple (number_string, color_hex).
     """
@@ -113,8 +113,8 @@ def find_parties(puuids: list[str], Requests_obj, log_func, current_teams: dict[
             # Find common matches (reverted logic)
             common_matches = puuid_history.intersection(other_history)
             
-            # Threshold: >= 2 common matches from recent history
-            if len(common_matches) >= 2:
+            # Threshold: >= 4 common matches from recent history
+            if len(common_matches) >= 4:
                 current_party.add(other_puuid)
 
         if len(current_party) > 1:
