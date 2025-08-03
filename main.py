@@ -256,7 +256,10 @@ try:
                 current_teams = {p['Subject']: p['TeamID'] for p in Players}
                 log(f"Player PUUIDs for party check: {player_puuids}")
                 # Pass current_teams to find_parties
-                party_assignments = find_parties(player_puuids, Requests, log, current_teams=current_teams)
+                if cfg.get_feature_flag("party_finder"):
+                    party_assignments = find_parties(player_puuids, Requests, log, current_teams=current_teams)
+                else:
+                    party_assignments = {}
                 # --- End Find Parties ---
 
                 partyMembers = menu.get_party_members(Requests.puuid, presence)
@@ -605,7 +608,10 @@ try:
                 player_puuids = [player["Subject"] for player in Players]
                 log(f"Player PUUIDs for party check: {player_puuids}")
                 # Do NOT pass current_teams in PREGAME
-                party_assignments = find_parties(player_puuids, Requests, log)
+                if cfg.get_feature_flag("party_finder"):
+                    party_assignments = find_parties(player_puuids, Requests, log)
+                else:
+                    party_assignments = {}
                 # --- End Find Parties ---
 
                 presences.wait_for_presence(namesClass.get_players_puuid(Players))
@@ -849,7 +855,10 @@ try:
                 player_puuids = [player["Subject"] for player in Players]
                 log(f"Player PUUIDs for party check: {player_puuids}")
                 # Do NOT pass current_teams in MENUS
-                party_assignments = find_parties(player_puuids, Requests, log)
+                if cfg.get_feature_flag("party_finder"):
+                    party_assignments = find_parties(player_puuids, Requests, log)
+                else:
+                    party_assignments = {}
                 # --- End Find Parties ---
 
                 playersLoaded = 1
