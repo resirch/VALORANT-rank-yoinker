@@ -27,7 +27,7 @@ class Table:
         self.log = log
         self.rich_table = RichTable()
         self.col_flags = [
-            True,  # Party
+            bool(config.get_feature_flag("party_finder")),  # Party
             True,  # Agent
             True,  # Name
             bool(config.table.get("skin", True)),  # Skin

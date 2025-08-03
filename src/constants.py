@@ -181,6 +181,6 @@ DEFAULT_CONFIG = {
             "peak_rank_act": True,
             "discord_rpc": True,
             "aggregate_rank_rr": True,
-            "party_finder": True
+            "party_finder": Trueremove
         }
     }
