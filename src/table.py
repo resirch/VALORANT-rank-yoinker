@@ -40,7 +40,7 @@ class Table:
             bool(config.table.get("headshot_percent", True)),  # hs
             bool(config.table.get("winrate", True)),  # wr
             bool(config.table.get("kd", True)),  # KD
-            bool(config.table.get("level", True)),  # Level
+            False,  # Level (temporarily hidden)
             bool(config.table.get("earned_rr", True)),  # Earned RR
         ]
         self.runtime_col_flags = self.col_flags[:]  # making a copy
@@ -90,6 +90,12 @@ class Table:
             "  ",
             self.ansi_to_console(right_text),
         )
+        return grid
+
+    def make_center_cell(self, text: str):
+        grid = RichInnerTable.grid(expand=True)
+        grid.add_column(justify="center")
+        grid.add_row(self.ansi_to_console(text))
         return grid
 
     def add_row_table(self, args: list):

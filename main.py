@@ -433,6 +433,15 @@ try:
                         ranked_rating_earned = colors.get_rr_gradient(
                             rr_numeric_value, afk_penalty
                         )
+                        # ΔRR cell: center dash when N/A or 0 (0)
+                        def _is_na(v):
+                            return str(v).strip().lower() in ("n/a", "na", "none", "")
+                        earned_rr_is_dash = False
+                        try:
+                            earned_rr_is_dash = (int(rr_numeric_value) == 0 and int(afk_penalty) == 0)
+                        except (ValueError, TypeError):
+                            earned_rr_is_dash = _is_na(rr_numeric_value) and _is_na(afk_penalty)
+                        earned_rr_cell = table.make_center_cell(color("-", fore=(46,46,46))) if earned_rr_is_dash else ranked_rating_earned
 
                         player_level = player["PlayerIdentity"].get("AccountLevel")
 
@@ -505,7 +514,12 @@ try:
                             peakRankAct = ""
 
                         # PEAK RANK
-                        peakRank = format_rank_with_square(playerRank["peakrank"], 0, is_peak_rank=True) + peakRankAct
+                        if playerRank["peakrank"] == 0:
+                            # Unrated peak: no act suffix
+                            peakRank = format_rank_with_square(0, 0, is_peak_rank=True)
+                            peakRankAct = ""
+                        else:
+                            peakRank = format_rank_with_square(playerRank["peakrank"], 0, is_peak_rank=True) + peakRankAct
 
                         # PREVIOUS RANK
                         previousRank = format_rank_with_square(previousPlayerRank["rank"], 0)
@@ -513,7 +527,8 @@ try:
                         # LEADERBOARD
                         leaderboard = playerRank["leaderboard"]
 
-                        hs = colors.get_hs_gradient(hs)
+                        hs_val = colors.get_hs_gradient(hs) if str(hs).strip().lower() not in ("n/a", "na", "none", "") else color("-", fore=(46,46,46))
+                        hs_cell = table.make_center_cell(hs_val)
                         wr = (
                             colors.get_wr_gradient(playerRank["wr"]) + f" ({playerRank['numberofgames']})"
                         )
@@ -532,14 +547,16 @@ try:
                         if cfg.get_feature_flag("aggregate_rank_rr"):
                             # Rank cell shows rank + RR; put RR in right part except for Unrated
                             if playerRank["rank"] == 0:
-                                rank_cell = rankName  # already grey Unrated
+                                # Left-align Unrated by using split cell with empty right part
+                                rank_cell = table.make_split_cell(rankName, "")
                             else:
                                 # left part: rank label without trailing RR
                                 left_rank = rankName.rsplit("(", 1)[0].rstrip()
                                 right_rr = f"({rr})"
                                 rank_cell = table.make_split_cell(left_rank, right_rr)
                         else:
-                            rank_cell = rankName
+                            # Left-align Unrated too
+                            rank_cell = table.make_split_cell(rankName, "") if playerRank["rank"] == 0 else rankName
 
                         # Peak rank cell: split left label and right act code
                         if cfg.get_feature_flag("peak_rank_act") and playerRank["peakrank"] != 0 and peakRankAct:
@@ -547,7 +564,19 @@ try:
                             right_peak = peakRank[peakRank.rfind("("):]
                             peak_cell = table.make_split_cell(left_peak, right_peak)
                         else:
-                            peak_cell = peakRank
+                            # Left-align Unrated peak
+                            peak_cell = table.make_split_cell(peakRank, "") if playerRank["peakrank"] == 0 else peakRank
+
+                        # Build WR split cell: left winrate, right games in parentheses
+                        wr_is_na = str(playerRank['wr']).strip().lower() in ("n/a", "na", "none", "")
+                        wr_left = table.make_center_cell(color("-", fore=(46,46,46))) if wr_is_na else colors.get_wr_gradient(playerRank['wr'])
+                        games_text = f"({playerRank['numberofgames']})" if (not wr_is_na and str(playerRank['numberofgames']).isdigit()) else ""
+                        wr_cell = wr_left if wr_is_na else table.make_split_cell(wr_left, games_text)
+
+                        # Build RR split cell (left RR, no right part); use '-' if not available
+                        rr_is_na = str(rr).strip().lower() in ("n/a", "na", "none", "")
+                        rr_text = str(rr) if not rr_is_na else color("-", fore=(46,46,46))
+                        rr_cell = table.make_center_cell(rr_text) if rr_is_na else table.make_split_cell(rr_text, "")
 
                         table.add_row_table(
                             [
@@ -557,15 +586,15 @@ try:
                                 # views,
                                 skin,
                                 rank_cell,
-                                rr,
+                                rr_cell,
                                 peak_cell,
                                 previousRank,
                                 leaderboard,
-                                hs,
-                                wr,
+                                hs_cell,
+                                wr_cell,
                                 kd,
                                 level,
-                                ranked_rating_earned,
+                                earned_rr_cell,
                             ]
                         )
 
@@ -725,6 +754,15 @@ try:
                         ranked_rating_earned = colors.get_rr_gradient(
                             rr_numeric_value, afk_penalty
                         )
+                        # ΔRR cell: center dash when N/A or 0 (0)
+                        def _is_na_p(v):
+                            return str(v).strip().lower() in ("n/a", "na", "none", "")
+                        earned_rr_is_dash_p = False
+                        try:
+                            earned_rr_is_dash_p = (int(rr_numeric_value) == 0 and int(afk_penalty) == 0)
+                        except (ValueError, TypeError):
+                            earned_rr_is_dash_p = _is_na_p(rr_numeric_value) and _is_na_p(afk_penalty)
+                        earned_rr_cell_p = table.make_center_cell(color("-", fore=(46,46,46))) if earned_rr_is_dash_p else ranked_rating_earned
 
                         player_level = player["PlayerIdentity"].get("AccountLevel")
                         if player["PlayerIdentity"]["Incognito"]:
@@ -803,7 +841,11 @@ try:
                         if not cfg.get_feature_flag("peak_rank_act"):
                             peakRankAct = ""
                         # PEAK RANK
-                        peakRank = format_rank_with_square(playerRank["peakrank"], 0, is_peak_rank=True) + peakRankAct
+                        if playerRank["peakrank"] == 0:
+                            peakRank = format_rank_with_square(0, 0, is_peak_rank=True)
+                            peakRankAct = ""
+                        else:
+                            peakRank = format_rank_with_square(playerRank["peakrank"], 0, is_peak_rank=True) + peakRankAct
 
                         # PREVIOUS RANK
                         previousRank = format_rank_with_square(previousPlayerRank["rank"], 0)
@@ -811,7 +853,8 @@ try:
                         # LEADERBOARD
                         leaderboard = playerRank["leaderboard"]
 
-                        hs = colors.get_hs_gradient(hs)
+                        hs_val = colors.get_hs_gradient(hs) if str(hs).strip().lower() not in ("n/a", "na", "none", "") else color("-", fore=(46,46,46))
+                        hs_cell = table.make_center_cell(hs_val)
                         wr = (
                             colors.get_wr_gradient(playerRank["wr"])
                             + f" ({playerRank['numberofgames']})"
@@ -830,20 +873,31 @@ try:
                         # Build split cells
                         if cfg.get_feature_flag("aggregate_rank_rr"):
                             if playerRank["rank"] == 0:
-                                rank_cell = rankName
+                                rank_cell = table.make_split_cell(rankName, "")
                             else:
                                 left_rank = rankName.rsplit("(", 1)[0].rstrip()
                                 right_rr = f"({rr})"
                                 rank_cell = table.make_split_cell(left_rank, right_rr)
                         else:
-                            rank_cell = rankName
+                            rank_cell = table.make_split_cell(rankName, "") if playerRank["rank"] == 0 else rankName
 
                         if cfg.get_feature_flag("peak_rank_act") and playerRank["peakrank"] != 0 and peakRankAct:
                             left_peak = peakRank.rsplit("(", 1)[0].rstrip()
                             right_peak = peakRank[peakRank.rfind("("):]
                             peak_cell = table.make_split_cell(left_peak, right_peak)
                         else:
-                            peak_cell = peakRank
+                            peak_cell = table.make_split_cell(peakRank, "") if playerRank["peakrank"] == 0 else peakRank
+
+                        # Build WR split cell: left winrate, right games in parentheses
+                        wr_is_na = str(playerRank['wr']).strip().lower() in ("n/a", "na", "none", "")
+                        wr_left = table.make_center_cell(color("-", fore=(46,46,46))) if wr_is_na else colors.get_wr_gradient(playerRank['wr'])
+                        games_text = f"({playerRank['numberofgames']})" if (not wr_is_na and str(playerRank['numberofgames']).isdigit()) else ""
+                        wr_cell = wr_left if wr_is_na else table.make_split_cell(wr_left, games_text)
+
+                        # Build RR split cell (left RR, no right part); use '-' if not available
+                        rr_is_na = str(rr).strip().lower() in ("n/a", "na", "none", "")
+                        rr_text = str(rr) if not rr_is_na else color("-", fore=(46,46,46))
+                        rr_cell = table.make_center_cell(rr_text) if rr_is_na else table.make_split_cell(rr_text, "")
 
                         table.add_row_table(
                             [
@@ -853,15 +907,15 @@ try:
                                 # views,
                                 "",
                                 rank_cell,
-                                rr,
+                                rr_cell,
                                 peak_cell,
                                 previousRank,
                                 leaderboard,
-                                hs,
-                                wr,
+                                hs_cell,
+                                wr_cell,
                                 kd,
                                 level,
-                                ranked_rating_earned,
+                                earned_rr_cell_p,
                             ]
                         )
 
@@ -955,6 +1009,15 @@ try:
                             ranked_rating_earned = colors.get_rr_gradient(
                                 rr_numeric_value, afk_penalty
                             )
+                            # ΔRR cell: center dash when N/A or 0 (0)
+                            def _is_na_m(v):
+                                return str(v).strip().lower() in ("n/a", "na", "none", "")
+                            earned_rr_is_dash_m = False
+                            try:
+                                earned_rr_is_dash_m = (int(rr_numeric_value) == 0 and int(afk_penalty) == 0)
+                            except (ValueError, TypeError):
+                                earned_rr_is_dash_m = _is_na_m(rr_numeric_value) and _is_na_m(afk_penalty)
+                            earned_rr_cell_m = table.make_center_cell(color("-", fore=(46,46,46))) if earned_rr_is_dash_m else ranked_rating_earned
 
                             player_level = player["PlayerIdentity"].get("AccountLevel")
                             PLcolor = colors.level_to_color(player_level)
@@ -984,9 +1047,13 @@ try:
                                 peakRankAct = ""
 
                             # PEAK RANK
-                            peakRank = (
-                                format_rank_with_square(playerRank["peakrank"], 0, is_peak_rank=True) + peakRankAct
-                            )
+                            if playerRank["peakrank"] == 0:
+                                peakRank = format_rank_with_square(0, 0, is_peak_rank=True)
+                                peakRankAct = ""
+                            else:
+                                peakRank = (
+                                    format_rank_with_square(playerRank["peakrank"], 0, is_peak_rank=True) + peakRankAct
+                                )
 
                             # PREVIOUS RANK
                             previousRank = format_rank_with_square(previousPlayerRank["rank"], 0)
@@ -994,7 +1061,8 @@ try:
                             # LEADERBOARD
                             leaderboard = playerRank["leaderboard"]
 
-                            hs = colors.get_hs_gradient(hs)
+                            hs_val = colors.get_hs_gradient(hs) if str(hs).strip().lower() not in ("n/a", "na", "none", "") else color("-", fore=(46,46,46))
+                            hs_cell = table.make_center_cell(hs_val)
                             wr = (
                                 colors.get_wr_gradient(playerRank["wr"]) + f" ({playerRank['numberofgames']})"
                             )
@@ -1038,11 +1106,11 @@ try:
                                     peak_cell,
                                     previousRank,
                                     leaderboard,
-                                    hs,
+                                    hs_cell,
                                     wr,
                                     kd,
                                     level,
-                                    ranked_rating_earned,
+                                    earned_rr_cell_m,
                                 ]
                             )
 

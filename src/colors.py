@@ -154,19 +154,23 @@ class Colors:
                 return color(number, fore=f)
 
     def get_rr_gradient(self, rr_value, afk_penalty):
-        """Returns RR value in green if positive, red if negative, white if zero, and AFK penalty in a different color."""
+        """Returns delta RR as colored text; shows grey dash when unavailable or trivial (0 (0))."""
 
-        # If both values are N/A, return plain "N/A"
+        # Treat explicit N/A or invalid as dash
         if rr_value == "N/A" and afk_penalty == "N/A":
-            return color("N/A", fore=(46, 46, 46))  # Grey for "N/A"
+            return color("-", fore=(46, 46, 46))
 
         try:
             rr_value = int(rr_value)
             afk_penalty = int(afk_penalty)
-        except ValueError:
-            return color("N/A", fore=(46, 46, 46))  # Grey for invalid values
+        except (ValueError, TypeError):
+            return color("-", fore=(46, 46, 46))
 
-        # Color coding for RR
+        # If both zero, prefer dash
+        if rr_value == 0 and afk_penalty == 0:
+            return color("-", fore=(46, 46, 46))
+
+        # Color coding for RR (non-zero or zero with non-zero AFK)
         if rr_value > 0:
             rr_colored = color(
                 f"+{rr_value}", fore=(18, 204, 25)
