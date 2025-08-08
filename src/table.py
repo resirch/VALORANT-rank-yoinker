@@ -3,6 +3,7 @@ from typing import Literal, get_args
 # from prettytable import PrettyTable
 from rich.table import Table as RichTable
 from rich.console import Console as RichConsole
+from rich.table import Table as RichInnerTable
 
 TABLE_COLUMN_NAMES = Literal[
     "Party",
@@ -76,18 +77,28 @@ class Table:
     def set_field_names(self, field_names):
         self.rich_table.field_names = field_names
 
-    def add_row_table(self, args: list):
-        # row = [c for c, i in zip(args, self.col_flags) if i]
-        # row = [self.ansi_to_console(str(i)) for i in row]
-        self.rows.append(zip(self.field_names_candidates, args))
+    def make_split_cell(self, left_text: str, right_text: str):
+        grid = RichInnerTable.grid(expand=True)
+        # Left column
+        grid.add_column(justify="left")
+        # Spacer column: fixed width to guarantee at least two spaces
+        grid.add_column(justify="left", no_wrap=True, width=2)
+        # Right column
+        grid.add_column(justify="right")
+        grid.add_row(
+            self.ansi_to_console(left_text),
+            "  ",
+            self.ansi_to_console(right_text),
+        )
+        return grid
 
-        # self.rich_table.add_row(*row)
+    def add_row_table(self, args: list):
+        # Store field/value pairs; convert to a list so we can safely inspect multiple times
+        self.rows.append(list(zip(self.field_names_candidates, args)))
 
     def add_empty_row(self):
-        # empty_row = [""] * sum(self.col_flags)
-        # self.rich_table.add_row(*empty_row)
         self.rows.append(
-            zip(self.field_names_candidates, "" * len(self.field_names_candidates))
+            list(zip(self.field_names_candidates, [""] * len(self.field_names_candidates)))
         )
 
     def apply_rows(self):
@@ -95,12 +106,14 @@ class Table:
             processed_row = []
             for col_name, value in row:
                 if col_name in self.fields_to_display:
-                    str_value = str(value)
-                    # Check if the value uses Rich markup (simple check)
-                    if col_name == "Party" and str_value.startswith("[") and str_value.endswith("]"):
-                        processed_row.append(str_value) # Pass Rich markup directly
+                    # Convert basic types to strings
+                    if isinstance(value, (int, float, bool)) or value is None:
+                        processed_row.append(self.ansi_to_console(str(value)))
+                    elif isinstance(value, str):
+                        processed_row.append(self.ansi_to_console(value))
                     else:
-                        processed_row.append(self.ansi_to_console(str_value))
+                        # Assume value is a Rich renderable (e.g., grid)
+                        processed_row.append(value)
             self.rich_table.add_row(*processed_row)
 
     def reset_runtime_col_flags(self):
@@ -127,6 +140,8 @@ class Table:
         pass
 
     def ansi_to_console(self, line):
+        if not isinstance(line, str):
+            return line
         if "\x1b[38;2;" not in line:
             return line
         string_to_return = ""
@@ -151,5 +166,30 @@ class Table:
             if flag
         ]
 
+        # Dynamically include the Party column only if any row has a party icon/value
+        if "Party" in self.fields_to_display:
+            has_party = any(
+                any(col_name == "Party" and str(value).strip() != "" for col_name, value in row)
+                for row in self.rows
+            )
+            if not has_party:
+                self.fields_to_display = [f for f in self.fields_to_display if f != "Party"]
+
         for field in self.fields_to_display:
-            self.rich_table.add_column(field, justify="center")
+            # Column alignments
+            if field in ("Rank", "Peak Rank"):
+                # Center the column (header centered), prevent wrapping
+                self.rich_table.add_column(field, justify="center", no_wrap=True)
+            elif field == "RR":
+                self.rich_table.add_column(field, justify="right")
+            elif field == "Name":
+                # Keep on one line and ellipsize when too long; center, with a sane max width
+                self.rich_table.add_column(field, justify="center", no_wrap=True, overflow="ellipsis", max_width=14)
+            elif field == "Skin":
+                # Keep skin on one line and ellipsize with a capped width
+                self.rich_table.add_column(field, justify="center", no_wrap=True, overflow="ellipsis", max_width=18)
+            elif field == "Party":
+                # Show party column with no header text
+                self.rich_table.add_column("", justify="center", no_wrap=True)
+            else:
+                self.rich_table.add_column(field, justify="center")

@@ -409,7 +409,7 @@ try:
                                     {
                                         "rank": playerRank["rank"],
                                         "rank_name": colors.escape_ansi(
-                                            NUMBERTORANKS[playerRank["rank"]]
+                                            format_rank_with_square(playerRank["rank"], playerRank["rr"])
                                         )
                                         + " | "
                                         + str(playerRank["rr"])
@@ -487,11 +487,7 @@ try:
                         skin = loadouts.get(player["Subject"], "")
 
                         # RANK
-                        rankName = NUMBERTORANKS[playerRank["rank"]]
-                        if cfg.get_feature_flag("aggregate_rank_rr") and cfg.table.get(
-                            "rr"
-                        ):
-                            rankName += f" ({playerRank['rr']})"
+                        rankName = format_rank_with_square(playerRank["rank"], playerRank["rr"])
 
                         # RANK RATING
                         rr = playerRank["rr"]
@@ -509,28 +505,50 @@ try:
                             peakRankAct = ""
 
                         # PEAK RANK
-                        peakRank = NUMBERTORANKS[playerRank["peakrank"]] + peakRankAct
+                        peakRank = format_rank_with_square(playerRank["peakrank"], 0, is_peak_rank=True) + peakRankAct
 
                         # PREVIOUS RANK
-                        previousRank = NUMBERTORANKS[previousPlayerRank["rank"]]
+                        previousRank = format_rank_with_square(previousPlayerRank["rank"], 0)
 
                         # LEADERBOARD
                         leaderboard = playerRank["leaderboard"]
 
                         hs = colors.get_hs_gradient(hs)
                         wr = (
-                            colors.get_wr_gradient(playerRank["wr"])
-                            + f" ({playerRank['numberofgames']})"
+                            colors.get_wr_gradient(playerRank["wr"]) + f" ({playerRank['numberofgames']})"
                         )
 
                         # PARTY ICON
                         party_color = party_icon
 
-                        if int(leaderboard) > 0:
+                        # Only show leaderboard position for ranks below Immortal (rank 24+)
+                        if int(leaderboard) > 0 and playerRank["rank"] < 24:
                             is_leaderboard_needed = True
 
                         # LEVEL
                         level = PLcolor
+
+                        # Build split cells for Rank and Peak Rank
+                        if cfg.get_feature_flag("aggregate_rank_rr"):
+                            # Rank cell shows rank + RR; put RR in right part except for Unrated
+                            if playerRank["rank"] == 0:
+                                rank_cell = rankName  # already grey Unrated
+                            else:
+                                # left part: rank label without trailing RR
+                                left_rank = rankName.rsplit("(", 1)[0].rstrip()
+                                right_rr = f"({rr})"
+                                rank_cell = table.make_split_cell(left_rank, right_rr)
+                        else:
+                            rank_cell = rankName
+
+                        # Peak rank cell: split left label and right act code
+                        if cfg.get_feature_flag("peak_rank_act") and playerRank["peakrank"] != 0 and peakRankAct:
+                            left_peak = peakRank.rsplit("(", 1)[0].rstrip()
+                            right_peak = peakRank[peakRank.rfind("("):]
+                            peak_cell = table.make_split_cell(left_peak, right_peak)
+                        else:
+                            peak_cell = peakRank
+
                         table.add_row_table(
                             [
                                 party_icon,
@@ -538,9 +556,9 @@ try:
                                 name,
                                 # views,
                                 skin,
-                                rankName,
+                                rank_cell,
                                 rr,
-                                peakRank,
+                                peak_cell,
                                 previousRank,
                                 leaderboard,
                                 hs,
@@ -682,7 +700,7 @@ try:
                                     {
                                         "rank": playerRank["rank"],
                                         "rank_name": colors.escape_ansi(
-                                            NUMBERTORANKS[playerRank["rank"]]
+                                            format_rank_with_square(playerRank["rank"], playerRank["rr"])
                                         )
                                         + " | "
                                         + str(playerRank["rr"])
@@ -768,11 +786,7 @@ try:
                         # skin = loadouts[player["Subject"]]
 
                         # RANK
-                        rankName = NUMBERTORANKS[playerRank["rank"]]
-                        if cfg.get_feature_flag("aggregate_rank_rr") and cfg.table.get(
-                            "rr"
-                        ):
-                            rankName += f" ({playerRank['rr']})"
+                        rankName = format_rank_with_square(playerRank["rank"], playerRank["rr"])
 
                         # RANK RATING
                         rr = playerRank["rr"]
@@ -789,10 +803,10 @@ try:
                         if not cfg.get_feature_flag("peak_rank_act"):
                             peakRankAct = ""
                         # PEAK RANK
-                        peakRank = NUMBERTORANKS[playerRank["peakrank"]] + peakRankAct
+                        peakRank = format_rank_with_square(playerRank["peakrank"], 0, is_peak_rank=True) + peakRankAct
 
                         # PREVIOUS RANK
-                        previousRank = NUMBERTORANKS[previousPlayerRank["rank"]]
+                        previousRank = format_rank_with_square(previousPlayerRank["rank"], 0)
 
                         # LEADERBOARD
                         leaderboard = playerRank["leaderboard"]
@@ -806,11 +820,30 @@ try:
                         # PARTY ICON
                         party_color = party_icon
 
-                        if int(leaderboard) > 0:
+                        # Only show leaderboard position for ranks below Immortal (rank 24+)
+                        if int(leaderboard) > 0 and playerRank["rank"] < 24:
                             is_leaderboard_needed = True
 
                         # LEVEL
                         level = PLcolor
+
+                        # Build split cells
+                        if cfg.get_feature_flag("aggregate_rank_rr"):
+                            if playerRank["rank"] == 0:
+                                rank_cell = rankName
+                            else:
+                                left_rank = rankName.rsplit("(", 1)[0].rstrip()
+                                right_rr = f"({rr})"
+                                rank_cell = table.make_split_cell(left_rank, right_rr)
+                        else:
+                            rank_cell = rankName
+
+                        if cfg.get_feature_flag("peak_rank_act") and playerRank["peakrank"] != 0 and peakRankAct:
+                            left_peak = peakRank.rsplit("(", 1)[0].rstrip()
+                            right_peak = peakRank[peakRank.rfind("("):]
+                            peak_cell = table.make_split_cell(left_peak, right_peak)
+                        else:
+                            peak_cell = peakRank
 
                         table.add_row_table(
                             [
@@ -819,9 +852,9 @@ try:
                                 name,
                                 # views,
                                 "",
-                                rankName,
+                                rank_cell,
                                 rr,
-                                peakRank,
+                                peak_cell,
                                 previousRank,
                                 leaderboard,
                                 hs,
@@ -896,7 +929,7 @@ try:
                                         {
                                             "rank": playerRank["rank"],
                                             "rank_name": colors.escape_ansi(
-                                                NUMBERTORANKS[playerRank["rank"]]
+                                                format_rank_with_square(playerRank["rank"], playerRank["rr"])
                                             )
                                             + " | "
                                             + str(playerRank["rr"])
@@ -933,11 +966,7 @@ try:
                             name = color(names[player["Subject"]], fore=(76, 151, 237))
 
                             # RANK
-                            rankName = NUMBERTORANKS[playerRank["rank"]]
-                            if cfg.get_feature_flag(
-                                "aggregate_rank_rr"
-                            ) and cfg.table.get("rr"):
-                                rankName += f" ({playerRank['rr']})"
+                            rankName = format_rank_with_square(playerRank["rank"], playerRank["rr"])
 
                             # RANK RATING
                             rr = playerRank["rr"]
@@ -956,29 +985,47 @@ try:
 
                             # PEAK RANK
                             peakRank = (
-                                NUMBERTORANKS[playerRank["peakrank"]] + peakRankAct
+                                format_rank_with_square(playerRank["peakrank"], 0, is_peak_rank=True) + peakRankAct
                             )
 
                             # PREVIOUS RANK
-                            previousRank = NUMBERTORANKS[previousPlayerRank["rank"]]
+                            previousRank = format_rank_with_square(previousPlayerRank["rank"], 0)
 
                             # LEADERBOARD
                             leaderboard = playerRank["leaderboard"]
 
                             hs = colors.get_hs_gradient(hs)
                             wr = (
-                                colors.get_wr_gradient(playerRank["wr"])
-                                + f" ({playerRank['numberofgames']})"
+                                colors.get_wr_gradient(playerRank["wr"]) + f" ({playerRank['numberofgames']})"
                             )
 
                             # PARTY ICON
                             party_color = party_icon
 
-                            if int(leaderboard) > 0:
+                            # Only show leaderboard position for ranks below Immortal (rank 24+)
+                            if int(leaderboard) > 0 and playerRank["rank"] < 24:
                                 is_leaderboard_needed = True
 
                             # LEVEL
                             level = PLcolor
+
+                            # Build split cells
+                            if cfg.get_feature_flag("aggregate_rank_rr"):
+                                if playerRank["rank"] == 0:
+                                    rank_cell = rankName
+                                else:
+                                    left_rank = rankName.rsplit("(", 1)[0].rstrip()
+                                    right_rr = f"({rr})"
+                                    rank_cell = table.make_split_cell(left_rank, right_rr)
+                            else:
+                                rank_cell = rankName
+
+                            if cfg.get_feature_flag("peak_rank_act") and playerRank["peakrank"] != 0 and peakRankAct:
+                                left_peak = peakRank.rsplit("(", 1)[0].rstrip()
+                                right_peak = peakRank[peakRank.rfind("("):]
+                                peak_cell = table.make_split_cell(left_peak, right_peak)
+                            else:
+                                peak_cell = peakRank
 
                             table.add_row_table(
                                 [
@@ -986,9 +1033,9 @@ try:
                                     agent,
                                     name,
                                     "",
-                                    rankName,
+                                    rank_cell,
                                     rr,
-                                    peakRank,
+                                    peak_cell,
                                     previousRank,
                                     leaderboard,
                                     hs,

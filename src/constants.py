@@ -184,3 +184,90 @@ DEFAULT_CONFIG = {
             "party_finder": True
         }
     }
+
+def format_rank_with_square(rank_number, rr_value=0, is_peak_rank=False):
+    """
+    Format rank in the new format: [Color Square] [Rank Abbreviation] [Roman Numeral] ([Number])
+    For unrated: - Unrated (grey, no RR)
+    """
+    if rank_number == 0:
+        # Grey, same as other N/A style values, and no RR suffix
+        # Keep as simple text so it aligns with left part in split cells
+        return color("- Unrated", fore=(46, 46, 46))
+    
+    # Rank abbreviations
+    rank_abbreviations = {
+        3: "Irn", 4: "Irn", 5: "Irn",  # Iron
+        6: "Brz", 7: "Brz", 8: "Brz",  # Bronze  
+        9: "Slv", 10: "Slv", 11: "Slv", # Silver
+        12: "Gld", 13: "Gld", 14: "Gld", # Gold
+        15: "Plt", 16: "Plt", 17: "Plt", # Platinum
+        18: "Dia", 19: "Dia", 20: "Dia", # Diamond
+        21: "Asc", 22: "Asc", 23: "Asc", # Ascendant
+        24: "Imm", 25: "Imm", 26: "Imm", # Immortal
+        27: "Rad"  # Radiant
+    }
+    
+    # Roman numerals for tiers
+    roman_numerals = {
+        1: "I", 2: "II", 3: "III"
+    }
+    
+    # Color values for each rank
+    color_values = {
+        3: (72, 69, 62),    # Iron - gray
+        4: (72, 69, 62),
+        5: (72, 69, 62),
+        6: (187, 143, 90),  # Bronze - brown
+        7: (187, 143, 90),
+        8: (187, 143, 90),
+        9: (174, 178, 178), # Silver - silver
+        10: (174, 178, 178),
+        11: (174, 178, 178),
+        12: (197, 186, 63), # Gold - gold
+        13: (197, 186, 63),
+        14: (197, 186, 63),
+        15: (24, 167, 185), # Platinum - cyan
+        16: (24, 167, 185),
+        17: (24, 167, 185),
+        18: (216, 100, 199), # Diamond - magenta
+        19: (216, 100, 199),
+        20: (216, 100, 199),
+        21: (24, 148, 82),  # Ascendant - green
+        22: (24, 148, 82),
+        23: (24, 148, 82),
+        24: (221, 68, 68),  # Immortal - red
+        25: (221, 68, 68),
+        26: (221, 68, 68),
+        27: (255, 253, 205)  # Radiant - yellow
+    }
+    
+    if rank_number not in rank_abbreviations:
+        return f"- Unrated"
+    
+    # Calculate tier (1, 2, or 3)
+    tier = ((rank_number - 3) % 3) + 1
+    
+    # Get abbreviation and color values
+    abbreviation = rank_abbreviations[rank_number]
+    color_value = color_values[rank_number]
+    
+    # Create colored elements
+    color_square = color("■", fore=color_value)
+    colored_abbreviation = color(abbreviation, fore=color_value)
+    
+    # Radiant has only one tier, so omit roman numeral
+    include_roman = rank_number != 27
+    colored_roman = color(roman_numerals[tier], fore=color_value) if include_roman else ""
+    
+    # Format output strings
+    if is_peak_rank:
+        if include_roman:
+            return f"{color_square} {colored_abbreviation:<12} {colored_roman:>3}"
+        else:
+            return f"{color_square} {colored_abbreviation:<12}"
+    else:
+        if include_roman:
+            return f"{color_square} {colored_abbreviation:<12} {colored_roman:>3} ({rr_value})"
+        else:
+            return f"{color_square} {colored_abbreviation:<12} ({rr_value})"
