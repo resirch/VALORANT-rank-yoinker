@@ -28,6 +28,29 @@
 |![Skin](assets/Skin.png)|![Rank](assets/Rank.png)|![Rating](assets/Rating.png)|![Peak](assets/PeakRank.png)|![Level](assets/Level.png)|
     
 
+## Key Differences from Main Repository
+
+This fork includes several enhancements and customizations that improve the user experience:
+
+### **Enhanced Rank Display**
+- **Custom Rank Formatting**: Ranks are displayed with colored squares, abbreviations, and Roman numerals
+  - Example: `■ Gld III (45)` instead of `Gold 3 (45)`
+  - Color-coded squares for each rank tier (Iron, Bronze, Silver, Gold, etc.)
+  - Special handling for unrated players with grey formatting
+- **Improved Visual Hierarchy**: Better alignment and spacing for rank information
+
+### **Advanced Party Detection**
+- **Smart Party Finder**: Automatically detects and displays party members in matches
+- **Dynamic Party Column**: Party column only appears when party members are detected
+- **Configurable Feature**: Can be enabled/disabled via `party_finder` setting in config
+
+### **Improved Skin Display**
+- **Smart Skin Name Processing**: Automatically removes weapon names from skin displays
+  - Example: "Kuronami Vandal" → "Kuronami"
+- **Intelligent Shortening**: Preserves important numeric tokens (e.g., "2.0") while shortening names
+
+> **Note**: This fork maintains full compatibility with the main repository while adding these enhancements. All upstream updates and bug fixes are regularly merged to ensure you get the latest improvements.
+
 ## Usage
  **VALORANT must be open**.
 
