@@ -79,8 +79,12 @@ class Ws:
                         state = None
                     else:
                         try:
-                            private_data = json.loads(base64.b64decode(presence['private']))
-                            state = private_data["matchPresenceData"]["sessionLoopState"]
+                            # Check if private data exists and is not None before decoding
+                            if presence.get('private') is not None:
+                                private_data = json.loads(base64.b64decode(presence['private']))
+                                state = private_data["matchPresenceData"]["sessionLoopState"]
+                            else:
+                                state = None
                         except (json.JSONDecodeError, KeyError, TypeError) as e:
                             print(f"Warning: Failed to decode private presence data: {e}")
                             state = None
@@ -88,7 +92,9 @@ class Ws:
                 if state is not None:
                     if self.cfg.get_feature_flag("discord_rpc") and presence.get('private') is not None:
                         try:
-                            self.rpc.set_rpc(json.loads(base64.b64decode(presence['private'])))
+                            # Additional check to ensure private data is not None before decoding
+                            if presence.get('private') is not None:
+                                self.rpc.set_rpc(json.loads(base64.b64decode(presence['private'])))
                         except (json.JSONDecodeError, KeyError, TypeError) as e:
                             print(f"Warning: Failed to set RPC data: {e}")
                     if state != initial_game_state:
