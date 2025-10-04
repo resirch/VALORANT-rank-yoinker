@@ -83,7 +83,7 @@ class Table:
         self.field_names = [
             c for c, i in zip(self.field_names_candidates, self.col_flags) if i
         ]
-        self.console = RichConsole(color_system="truecolor")
+        self.console = RichConsole(color_system="truecolor", width=300)
 
         # only to get init value not used
         self.overall_col_flags = [
