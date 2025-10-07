@@ -203,14 +203,21 @@ try:
                 loop = asyncio.new_event_loop()
                 asyncio.set_event_loop(loop)
                 previous_game_state = game_state
-                game_state = loop.run_until_complete(
-                    Wss.recconect_to_websocket(game_state)
-                )
-                # We invalidate the cached responses when going from any state to menus
-                if previous_game_state != game_state and game_state == "MENUS":
-                    rank.invalidate_cached_responses()
-                log(f"new game state: {game_state}")
-                loop.close()
+                try:
+                    game_state = loop.run_until_complete(
+                        Wss.recconect_to_websocket(game_state)
+                    )
+                    # We invalidate the cached responses when going from any state to menus
+                    if previous_game_state != game_state and game_state == "MENUS":
+                        rank.invalidate_cached_responses()
+                    log(f"new game state: {game_state}")
+                except Exception as e:
+                    log(f"Websocket connection error: {e}")
+                    print(f"Connection error: {e}")
+                    print("Valorant may have been closed. Continuing in MENUS state...")
+                    game_state = "MENUS"
+                finally:
+                    loop.close()
             firstTime = False
             # loop = asyncio.new_event_loop()
             # asyncio.set_event_loop(loop)
@@ -233,8 +240,14 @@ try:
             is_leaderboard_needed = False
             
             # get new presence
-            presence = presences.get_presence()
-            priv_presence = presences.get_private_presence(presence)
+            try:
+                presence = presences.get_presence()
+                priv_presence = presences.get_private_presence(presence)
+            except Exception as e:
+                log(f"Failed to get presence data: {e}")
+                print(color("Unable to connect to Valorant client. Please ensure Valorant is running.", fore=(255, 0, 0)))
+                time.sleep(5)
+                continue
             
             if (
                 priv_presence["provisioningFlow"] == "CustomGame"
@@ -1142,6 +1155,7 @@ try:
                     seen.append(player["Subject"])
             if (title := game_state_dict.get(game_state)) is None:
                 # program_exit(1)
+                print(color("Waiting for Valorant to start...", fore=(255, 165, 0)))
                 time.sleep(9)
             
             title_parts = [f"VALORANT status: {title}"]

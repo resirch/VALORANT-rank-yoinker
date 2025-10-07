@@ -4,6 +4,8 @@ import websockets.client
 import ssl
 import base64
 import json
+import asyncio
+import time
 from colr import color
 
 
@@ -38,17 +40,54 @@ class Ws:
         local_headers = {}
         local_headers['Authorization'] = 'Basic ' + base64.b64encode(('riot:' + self.lockfile['password']).encode()).decode()
         url = f"wss://127.0.0.1:{self.lockfile['port']}"
-        self.websocket_client = websockets.connect(url, ssl=self.ssl_context, extra_headers=local_headers)
-        async with self.websocket_client as websocket:
-            await websocket.send('[5, "OnJsonApiEvent_chat_v4_presences"]')
-            if self.cfg.get_feature_flag("game_chat"):
-                await websocket.send('[5, "OnJsonApiEvent_chat_v6_messages"]')
-            while True:
-                response = await websocket.recv()
-                h = self.handle(response, initial_game_state)
-                if h is not None:
-                    await websocket.close()
-                    return h
+        
+        max_retries = 3
+        retry_delay = 1  # Start with 1 second delay
+        
+        for attempt in range(max_retries):
+            try:
+                self.websocket_client = websockets.connect(url, ssl=self.ssl_context, extra_headers=local_headers)
+                async with self.websocket_client as websocket:
+                    await websocket.send('[5, "OnJsonApiEvent_chat_v4_presences"]')
+                    if self.cfg.get_feature_flag("game_chat"):
+                        await websocket.send('[5, "OnJsonApiEvent_chat_v6_messages"]')
+                    while True:
+                        try:
+                            response = await websocket.recv()
+                            h = self.handle(response, initial_game_state)
+                            if h is not None:
+                                await websocket.close()
+                                return h
+                        except websockets.exceptions.ConnectionClosedError as e:
+                            print(f"Websocket connection closed: {e}")
+                            # Return to MENUS state when connection is lost (Valorant closed)
+                            return "MENUS"
+                        except asyncio.exceptions.IncompleteReadError as e:
+                            print(f"Incomplete read error: {e}")
+                            # Return to MENUS state when connection is lost (Valorant closed)
+                            return "MENUS"
+            except (ConnectionRefusedError, OSError, websockets.exceptions.InvalidURI) as e:
+                if attempt < max_retries - 1:
+                    print(f"Failed to connect to Valorant client (attempt {attempt + 1}/{max_retries}): {e}")
+                    print(f"Retrying in {retry_delay} seconds...")
+                    await asyncio.sleep(retry_delay)
+                    retry_delay *= 2  # Exponential backoff
+                else:
+                    print(f"Failed to connect to Valorant client after {max_retries} attempts: {e}")
+                    print("Valorant appears to be closed. Returning to MENUS state.")
+                    return "MENUS"
+            except Exception as e:
+                if attempt < max_retries - 1:
+                    print(f"Unexpected websocket error (attempt {attempt + 1}/{max_retries}): {e}")
+                    print(f"Retrying in {retry_delay} seconds...")
+                    await asyncio.sleep(retry_delay)
+                    retry_delay *= 2  # Exponential backoff
+                else:
+                    print(f"Unexpected websocket error after {max_retries} attempts: {e}")
+                    return "MENUS"
+        
+        # If we get here, all retries failed
+        return "MENUS"
 
     def handle(self, m, initial_game_state):
         # Check if message is valid and not empty
