@@ -35,10 +35,25 @@ class Names:
             latest_entry = stats_data[puuid][-1]
             old_name = latest_entry.get("name", "")
             
+            # Extract the base name if it already has a "(now ...)" format
             if "(now " in old_name:
                 old_name = old_name.split(" (now ")[0]
             
-            if old_name != current_name and old_name != "":
+            # Extract the base name from current_name for comparison
+            current_base_name = current_name
+            if "#" in current_name:
+                current_base_name = current_name.split("#")[0]
+            
+            # Extract the base name from old_name for comparison
+            old_base_name = old_name
+            if "#" in old_name:
+                old_base_name = old_name.split("#")[0]
+            
+            # Compare base names (without tags)
+            if old_base_name != current_base_name and old_base_name != "":
+                return f"{old_name} (now {current_name})"
+            elif old_base_name == "" and current_base_name != "":
+                # Handle case where old name was empty but new name is not
                 return f"{old_name} (now {current_name})"
             else:
                 return current_name
