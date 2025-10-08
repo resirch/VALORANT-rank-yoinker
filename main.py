@@ -401,9 +401,9 @@ try:
                                         already_played_with.append(
                                             {
                                                 "times": times,
-                                                "name": agent_dict[
-                                                    player["CharacterID"].lower()
-                                                ]
+                                                "name": agent_dict.get(
+                                                    player["CharacterID"].lower(), "Unknown Agent"
+                                                )
                                                 + " on "
                                                 + team_string
                                                 + " team",
@@ -624,7 +624,7 @@ try:
                         heartbeat_data["players"][player["Subject"]] = {
                             "puuid": player["Subject"],
                             "name": names[player["Subject"]],
-                            "agent": agent_dict[player["CharacterID"].lower()],
+                            "agent": agent_dict.get(player["CharacterID"].lower(), "Unknown Agent"),
                             "rank": playerRank["rank"],
                             "peakRank": playerRank["peakrank"],
                             "peakRankAct": peakRankAct,
@@ -657,7 +657,7 @@ try:
                             {
                                 player["Subject"]: {
                                     "name": names[player["Subject"]],
-                                    "agent": agent_dict[player["CharacterID"].lower()],
+                                    "agent": agent_dict.get(player["CharacterID"].lower(), "Unknown Agent"),
                                     "map": current_map,
                                     "rank": playerRank["rank"],
                                     "rr": rr,
@@ -820,17 +820,17 @@ try:
                             PLcolor = colors.level_to_color(player_level)
                         if player["CharacterSelectionState"] == "locked":
                             agent_color = color(
-                                str(agent_dict.get(player["CharacterID"].lower())),
+                                str(agent_dict.get(player["CharacterID"].lower(), "Unknown Agent")),
                                 fore=(255, 255, 255),
                             )
                         elif player["CharacterSelectionState"] == "selected":
                             agent_color = color(
-                                str(agent_dict.get(player["CharacterID"].lower())),
+                                str(agent_dict.get(player["CharacterID"].lower(), "Unknown Agent")),
                                 fore=(128, 128, 128),
                             )
                         else:
                             agent_color = color(
-                                str(agent_dict.get(player["CharacterID"].lower())),
+                                str(agent_dict.get(player["CharacterID"].lower(), "Unknown Agent")),
                                 fore=(54, 53, 51),
                             )
 
@@ -945,7 +945,7 @@ try:
 
                         heartbeat_data["players"][player["Subject"]] = {
                             "name": names[player["Subject"]],
-                            "agent": agent_dict[player["CharacterID"].lower()],
+                            "agent": agent_dict.get(player["CharacterID"].lower(), "Unknown Agent"),
                             "rank": playerRank["rank"],
                             "peakRank": playerRank["peakrank"],
                             "peakRankAct": peakRankAct,

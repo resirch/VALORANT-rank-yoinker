@@ -29,11 +29,12 @@ class Rpc():
     def set_data(self, data):
         self.data = self.data | data
         self.log("New data set in RPC")
-        self.set_rpc(self.last_presence_data)
+        if self.discord_running and self.rpc is not None:
+            self.set_rpc(self.last_presence_data)
 
 
     def set_rpc(self, presence):
-        if self.discord_running:
+        if self.discord_running and self.rpc is not None:
             try:
                 if presence["isValid"]:
                     match_data = presence["matchPresenceData"]
@@ -69,17 +70,22 @@ class Rpc():
                         if self.last_presence_data.get("matchPresenceData", {}).get("sessionLoopState") != match_data["sessionLoopState"]:
                             self.start_time = time.time()
 
-                        self.rpc.update(
-                            state=f"In a Party ({party_data['partySize']} of {party_data['maxPartySize']})",
-                            details=details,
-                            large_image=mapImage,
-                            large_text=mapText,
-                            small_image=agent_img,
-                            small_text=agent,
-                            start=self.start_time,
-                            buttons=[{"label": "What's this? 👀", "url": "https://zaykenyon.github.io/VALORANT-rank-yoinker/"}]
-                        )
-                        self.log("RPC in-game data update")
+                        try:
+                            self.rpc.update(
+                                state=f"In a Party ({party_data['partySize']} of {party_data['maxPartySize']})",
+                                details=details,
+                                large_image=mapImage,
+                                large_text=mapText,
+                                small_image=agent_img,
+                                small_text=agent,
+                                start=self.start_time,
+                                buttons=[{"label": "What's this? 👀", "url": "https://zaykenyon.github.io/VALORANT-rank-yoinker/"}]
+                            )
+                            self.log("RPC in-game data update")
+                        except (AttributeError, ConnectionError, OSError) as e:
+                            self.log(f"RPC update failed: {e}")
+                            self.discord_running = False
+                            self.rpc = None
                     elif match_data["sessionLoopState"] == "MENUS":
                         if presence["isIdle"]:
                             image = "game_icon_yellow"
@@ -98,16 +104,21 @@ class Rpc():
                         else:
                             gamemode = self.gamemodes.get(presence['queueId'])
 
-                        self.rpc.update(
-                            state=f"{party_string} ({party_data['partySize']} of {party_data['maxPartySize']})",
-                            details=f" Lobby - {gamemode}",
-                            large_image=image,
-                            large_text=image_text,
-                            small_image=str(self.data.get("rank")),
-                            small_text=self.data.get("rank_name"),
-                            buttons=[{"label": "What's this? 👀", "url": "https://zaykenyon.github.io/VALORANT-rank-yoinker/"}]
-                        )
-                        self.log("RPC menu data update")
+                        try:
+                            self.rpc.update(
+                                state=f"{party_string} ({party_data['partySize']} of {party_data['maxPartySize']})",
+                                details=f" Lobby - {gamemode}",
+                                large_image=image,
+                                large_text=image_text,
+                                small_image=str(self.data.get("rank")),
+                                small_text=self.data.get("rank_name"),
+                                buttons=[{"label": "What's this? 👀", "url": "https://zaykenyon.github.io/VALORANT-rank-yoinker/"}]
+                            )
+                            self.log("RPC menu data update")
+                        except (AttributeError, ConnectionError, OSError) as e:
+                            self.log(f"RPC update failed: {e}")
+                            self.discord_running = False
+                            self.rpc = None
                     elif match_data["sessionLoopState"] == "PREGAME":
                         if presence["provisioningFlow"] == "CustomGame" or party_data["partyState"] == "CUSTOM_GAME_SETUP":
                             gamemode = "Custom Game"
@@ -120,18 +131,25 @@ class Rpc():
                             mapText = None
                             mapImage = None
 
-                        self.rpc.update(
-                            state=f"In a Party ({party_data['partySize']} of {party_data['maxPartySize']})",
-                            details=f"Agent Select - {gamemode}",
-                            large_image=mapImage,
-                            large_text=mapText,
-                            small_image=str(self.data.get("rank")),
-                            small_text=self.data.get("rank_name"),
-                            buttons=[{"label": "What's this? 👀", "url": "https://zaykenyon.github.io/VALORANT-rank-yoinker/"}]
-                        )
-                        self.log("RPC agent-select data update")
-            except InvalidID:
+                        try:
+                            self.rpc.update(
+                                state=f"In a Party ({party_data['partySize']} of {party_data['maxPartySize']})",
+                                details=f"Agent Select - {gamemode}",
+                                large_image=mapImage,
+                                large_text=mapText,
+                                small_image=str(self.data.get("rank")),
+                                small_text=self.data.get("rank_name"),
+                                buttons=[{"label": "What's this? 👀", "url": "https://zaykenyon.github.io/VALORANT-rank-yoinker/"}]
+                            )
+                            self.log("RPC agent-select data update")
+                        except (AttributeError, ConnectionError, OSError) as e:
+                            self.log(f"RPC update failed: {e}")
+                            self.discord_running = False
+                            self.rpc = None
+            except (InvalidID, AttributeError, ConnectionError, OSError) as e:
+                self.log(f"RPC connection error: {e}")
                 self.discord_running = False
+                self.rpc = None
         else:
             try:
                 self.rpc = Presence("1012402211134910546")
@@ -139,6 +157,8 @@ class Rpc():
                 self.discord_running = True
                 self.log("Reconnected to discord")
                 self.set_rpc(presence)
-            except DiscordNotFound:
+            except (DiscordNotFound, ConnectionError, OSError) as e:
+                self.log(f"Failed to reconnect to Discord: {e}")
                 self.discord_running = False
+                self.rpc = None
         self.last_presence_data = presence
