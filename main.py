@@ -432,7 +432,7 @@ try:
                                     {
                                         "rank": playerRank["rank"],
                                         "rank_name": colors.escape_ansi(
-                                            format_rank_with_square(playerRank["rank"], playerRank["rr"])
+                                            format_rank_with_square(playerRank["rank"], playerRank["rr"], config=cfg)
                                         )
                                         + " | "
                                         + str(playerRank["rr"])
@@ -519,7 +519,7 @@ try:
                         skin = loadouts.get(player["Subject"], "")
 
                         # RANK
-                        rankName = format_rank_with_square(playerRank["rank"], playerRank["rr"])
+                        rankName = format_rank_with_square(playerRank["rank"], playerRank["rr"], config=cfg)
 
                         # RANK RATING
                         rr = playerRank["rr"]
@@ -539,13 +539,13 @@ try:
                         # PEAK RANK
                         if playerRank["peakrank"] == 0:
                             # Unrated peak: no act suffix
-                            peakRank = format_rank_with_square(0, 0, is_peak_rank=True)
+                            peakRank = format_rank_with_square(0, 0, is_peak_rank=True, config=cfg)
                             peakRankAct = ""
                         else:
-                            peakRank = format_rank_with_square(playerRank["peakrank"], 0, is_peak_rank=True) + peakRankAct
+                            peakRank = format_rank_with_square(playerRank["peakrank"], 0, is_peak_rank=True, config=cfg) + peakRankAct
 
                         # PREVIOUS RANK
-                        previousRank = format_rank_with_square(previousPlayerRank["rank"], 0)
+                        previousRank = format_rank_with_square(previousPlayerRank["rank"], 0, config=cfg)
 
                         # LEADERBOARD
                         leaderboard = playerRank["leaderboard"]
@@ -753,7 +753,7 @@ try:
                                     {
                                         "rank": playerRank["rank"],
                                         "rank_name": colors.escape_ansi(
-                                            format_rank_with_square(playerRank["rank"], playerRank["rr"])
+                                            format_rank_with_square(playerRank["rank"], playerRank["rr"], config=cfg)
                                         )
                                         + " | "
                                         + str(playerRank["rr"])
@@ -848,7 +848,7 @@ try:
                         # skin = loadouts[player["Subject"]]
 
                         # RANK
-                        rankName = format_rank_with_square(playerRank["rank"], playerRank["rr"])
+                        rankName = format_rank_with_square(playerRank["rank"], playerRank["rr"], config=cfg)
 
                         # RANK RATING
                         rr = playerRank["rr"]
@@ -866,13 +866,13 @@ try:
                             peakRankAct = ""
                         # PEAK RANK
                         if playerRank["peakrank"] == 0:
-                            peakRank = format_rank_with_square(0, 0, is_peak_rank=True)
+                            peakRank = format_rank_with_square(0, 0, is_peak_rank=True, config=cfg)
                             peakRankAct = ""
                         else:
-                            peakRank = format_rank_with_square(playerRank["peakrank"], 0, is_peak_rank=True) + peakRankAct
+                            peakRank = format_rank_with_square(playerRank["peakrank"], 0, is_peak_rank=True, config=cfg) + peakRankAct
 
                         # PREVIOUS RANK
-                        previousRank = format_rank_with_square(previousPlayerRank["rank"], 0)
+                        previousRank = format_rank_with_square(previousPlayerRank["rank"], 0, config=cfg)
 
                         # LEADERBOARD
                         leaderboard = playerRank["leaderboard"]
@@ -1008,7 +1008,7 @@ try:
                                         {
                                             "rank": playerRank["rank"],
                                             "rank_name": colors.escape_ansi(
-                                                format_rank_with_square(playerRank["rank"], playerRank["rr"])
+                                                format_rank_with_square(playerRank["rank"], playerRank["rr"], config=cfg)
                                             )
                                             + " | "
                                             + str(playerRank["rr"])
@@ -1054,7 +1054,7 @@ try:
                             name = color(names[player["Subject"]], fore=(76, 151, 237))
 
                             # RANK
-                            rankName = format_rank_with_square(playerRank["rank"], playerRank["rr"])
+                            rankName = format_rank_with_square(playerRank["rank"], playerRank["rr"], config=cfg)
 
                             # RANK RATING
                             rr = playerRank["rr"]
@@ -1073,15 +1073,15 @@ try:
 
                             # PEAK RANK
                             if playerRank["peakrank"] == 0:
-                                peakRank = format_rank_with_square(0, 0, is_peak_rank=True)
+                                peakRank = format_rank_with_square(0, 0, is_peak_rank=True, config=cfg)
                                 peakRankAct = ""
                             else:
                                 peakRank = (
-                                    format_rank_with_square(playerRank["peakrank"], 0, is_peak_rank=True) + peakRankAct
+                                    format_rank_with_square(playerRank["peakrank"], 0, is_peak_rank=True, config=cfg) + peakRankAct
                                 )
 
                             # PREVIOUS RANK
-                            previousRank = format_rank_with_square(previousPlayerRank["rank"], 0)
+                            previousRank = format_rank_with_square(previousPlayerRank["rank"], 0, config=cfg)
 
                             # LEADERBOARD
                             leaderboard = playerRank["leaderboard"]

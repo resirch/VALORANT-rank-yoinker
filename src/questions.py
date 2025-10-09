@@ -26,6 +26,8 @@ FLAGS_OPTS = {
     "short_ranks": "Short rank names instead of long ones",
     "truncate_skins": "Truncate long skin names if the window is too small",
     "truncate_names": "Truncate long player names if the window is too small",
+    "truncate_ranks": "Use short rank names (Imm instead of Immortal)",
+    "roman_numerals": "Show roman numerals in rank display (I, II, III)",
     "starting_side": "Display starting side (Attacker/Defender) while in the pregame lobby"
 }
 

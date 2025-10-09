@@ -217,11 +217,13 @@ DEFAULT_CONFIG = {
             "short_ranks": False,
             "truncate_skins": True,
             "truncate_names": True,
+            "truncate_ranks": True,
+            "roman_numerals": True,
             "starting_side": False
         }
     }
 
-def format_rank_with_square(rank_number, rr_value=0, is_peak_rank=False):
+def format_rank_with_square(rank_number, rr_value=0, is_peak_rank=False, config=None):
     """
     Format rank in the new format: [Color Square] [Rank Abbreviation] [Roman Numeral] ([Number])
     For unrated: - Unrated (grey, no RR)
@@ -231,8 +233,16 @@ def format_rank_with_square(rank_number, rr_value=0, is_peak_rank=False):
         # Keep as simple text so it aligns with left part in split cells
         return color("- Unrated", fore=(46, 46, 46))
     
-    # Rank abbreviations
-    rank_abbreviations = {
+    # Get config settings
+    truncate_ranks = True  # Default to True for backward compatibility
+    roman_numerals = True  # Default to True for backward compatibility
+    
+    if config and hasattr(config, 'get_feature_flag'):
+        truncate_ranks = config.get_feature_flag("truncate_ranks")
+        roman_numerals = config.get_feature_flag("roman_numerals")
+    
+    # Rank abbreviations (short)
+    rank_abbreviations_short = {
         3: "Irn", 4: "Irn", 5: "Irn",  # Iron
         6: "Brz", 7: "Brz", 8: "Brz",  # Bronze  
         9: "Slv", 10: "Slv", 11: "Slv", # Silver
@@ -244,8 +254,24 @@ def format_rank_with_square(rank_number, rr_value=0, is_peak_rank=False):
         27: "Rad"  # Radiant
     }
     
+    # Rank abbreviations (full)
+    rank_abbreviations_full = {
+        3: "Iron", 4: "Iron", 5: "Iron",  # Iron
+        6: "Bronze", 7: "Bronze", 8: "Bronze",  # Bronze  
+        9: "Silver", 10: "Silver", 11: "Silver", # Silver
+        12: "Gold", 13: "Gold", 14: "Gold", # Gold
+        15: "Platinum", 16: "Platinum", 17: "Platinum", # Platinum
+        18: "Diamond", 19: "Diamond", 20: "Diamond", # Diamond
+        21: "Ascendant", 22: "Ascendant", 23: "Ascendant", # Ascendant
+        24: "Immortal", 25: "Immortal", 26: "Immortal", # Immortal
+        27: "Radiant"  # Radiant
+    }
+    
+    # Choose abbreviation based on truncate_ranks setting
+    rank_abbreviations = rank_abbreviations_short if truncate_ranks else rank_abbreviations_full
+    
     # Roman numerals for tiers
-    roman_numerals = {
+    roman_numerals_dict = {
         1: "I", 2: "II", 3: "III"
     }
     
@@ -292,18 +318,24 @@ def format_rank_with_square(rank_number, rr_value=0, is_peak_rank=False):
     color_square = color("■", fore=color_value)
     colored_abbreviation = color(abbreviation, fore=color_value)
     
-    # Radiant has only one tier, so omit roman numeral
-    include_roman = rank_number != 27
-    colored_roman = color(roman_numerals[tier], fore=color_value) if include_roman else ""
+    # Radiant has only one tier, so omit tier number
+    include_tier = rank_number != 27
+    if include_tier:
+        if roman_numerals:
+            colored_tier = color(roman_numerals_dict[tier], fore=color_value)
+        else:
+            colored_tier = color(str(tier), fore=color_value)
+    else:
+        colored_tier = ""
     
     # Format output strings
     if is_peak_rank:
-        if include_roman:
-            return f"{color_square} {colored_abbreviation:<12} {colored_roman:>3}"
+        if include_tier:
+            return f"{color_square} {colored_abbreviation:<12} {colored_tier:>3}"
         else:
             return f"{color_square} {colored_abbreviation:<12}"
     else:
-        if include_roman:
-            return f"{color_square} {colored_abbreviation:<12} {colored_roman:>3} ({rr_value})"
+        if include_tier:
+            return f"{color_square} {colored_abbreviation:<12} {colored_tier:>3} ({rr_value})"
         else:
             return f"{color_square} {colored_abbreviation:<12} ({rr_value})"
