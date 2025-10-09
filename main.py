@@ -130,7 +130,7 @@ try:
 
     colors = Colors(hide_names, agent_dict, AGENTCOLORLIST)
 
-    loadoutsClass = Loadouts(Requests, log, colors, Server, current_map)
+    loadoutsClass = Loadouts(Requests, log, colors, Server, current_map, cfg)
     table = Table(cfg, log)
 
     stats = Stats()

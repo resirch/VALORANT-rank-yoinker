@@ -6,13 +6,14 @@ import json
 
 
 class Loadouts:
-    def __init__(self, Requests, log, colors, Server, current_map):
+    def __init__(self, Requests, log, colors, Server, current_map, config=None):
 
         self.Requests = Requests
         self.log = log
         self.colors = colors
         self.Server = Server
         self.current_map = current_map
+        self.config = config
 
     def get_match_loadouts(self, match_id, players, weaponChoose, valoApiSkins, names, state="game"):
         playersBackup = players
@@ -47,23 +48,34 @@ class Loadouts:
                     for skin in valoApiSkins.json()["data"]:
                         if skin_id.lower() == skin["uuid"].lower():
                             rgb_color = self.colors.get_rgb_color_from_skin(skin["uuid"].lower(), valoApiSkins)
-                            # Remove trailing weapon name from skin display (e.g., "Kuronami Vandal" -> "Kuronami")
+                            # Get the full skin display name
                             display_name = skin.get("displayName", "")
-                            for weapon_obj in valApiWeapons["data"]:
-                                weapon_name = weapon_obj.get("displayName", "")
-                                if weapon_name and display_name.lower().endswith(" " + weapon_name.lower()):
-                                    display_name = display_name[: -len(weapon_name)].rstrip()
-                                    break
-                            # Shorten to first word, keeping a numeric token (e.g., 2.0) if present anywhere
-                            tokens = display_name.split()
-                            if tokens:
-                                first_word = tokens[0]
-                                numeric_tokens = [t for t in tokens if any(ch.isdigit() for ch in t)]
-                                if numeric_tokens:
-                                    short_name = f"{first_word} {numeric_tokens[-1]}"
+                            
+                            # Check if truncate_skins is enabled
+                            truncate_skins = True  # Default to True for backward compatibility
+                            if self.config and hasattr(self.config, 'get_feature_flag'):
+                                truncate_skins = self.config.get_feature_flag("truncate_skins")
+                            
+                            if truncate_skins:
+                                # Remove trailing weapon name from skin display (e.g., "Kuronami Vandal" -> "Kuronami")
+                                for weapon_obj in valApiWeapons["data"]:
+                                    weapon_name = weapon_obj.get("displayName", "")
+                                    if weapon_name and display_name.lower().endswith(" " + weapon_name.lower()):
+                                        display_name = display_name[: -len(weapon_name)].rstrip()
+                                        break
+                                # Shorten to first word, keeping a numeric token (e.g., 2.0) if present anywhere
+                                tokens = display_name.split()
+                                if tokens:
+                                    first_word = tokens[0]
+                                    numeric_tokens = [t for t in tokens if any(ch.isdigit() for ch in t)]
+                                    if numeric_tokens:
+                                        short_name = f"{first_word} {numeric_tokens[-1]}"
+                                    else:
+                                        short_name = first_word
                                 else:
-                                    short_name = first_word
+                                    short_name = display_name
                             else:
+                                # When truncate_skins is False, keep the full skin name with weapon name
                                 short_name = display_name
                             weaponLists.update({players[player]["Subject"]: color(short_name, fore=rgb_color)})
                             # else:
@@ -194,21 +206,32 @@ class Loadouts:
                                 )
                                 for skinValApi in weapon["skins"]:
                                     if skinValApi["uuid"] == PlayerInventory["Items"][skin]["Sockets"][sockets["skin"]]["Item"]["ID"]:
-                                        # Remove trailing weapon name from skin display (e.g., "Kuronami Vandal" -> "Kuronami")
+                                        # Get the full skin display name
                                         skin_name = skinValApi["displayName"]
                                         weapon_name = weapon["displayName"]
-                                        if skin_name.lower().endswith(" " + weapon_name.lower()):
-                                            skin_name = skin_name[: -len(weapon_name)].rstrip()
-                                        # Shorten to first word + numeric token if present anywhere
-                                        tokens = skin_name.split()
-                                        if tokens:
-                                            first_word = tokens[0]
-                                            numeric_tokens = [t for t in tokens if any(ch.isdigit() for ch in t)]
-                                            if numeric_tokens:
-                                                skin_name_short = f"{first_word} {numeric_tokens[-1]}"
+                                        
+                                        # Check if truncate_skins is enabled
+                                        truncate_skins = True  # Default to True for backward compatibility
+                                        if self.config and hasattr(self.config, 'get_feature_flag'):
+                                            truncate_skins = self.config.get_feature_flag("truncate_skins")
+                                        
+                                        if truncate_skins:
+                                            # Remove trailing weapon name from skin display (e.g., "Kuronami Vandal" -> "Kuronami")
+                                            if skin_name.lower().endswith(" " + weapon_name.lower()):
+                                                skin_name = skin_name[: -len(weapon_name)].rstrip()
+                                            # Shorten to first word + numeric token if present anywhere
+                                            tokens = skin_name.split()
+                                            if tokens:
+                                                first_word = tokens[0]
+                                                numeric_tokens = [t for t in tokens if any(ch.isdigit() for ch in t)]
+                                                if numeric_tokens:
+                                                    skin_name_short = f"{first_word} {numeric_tokens[-1]}"
+                                                else:
+                                                    skin_name_short = first_word
                                             else:
-                                                skin_name_short = first_word
+                                                skin_name_short = skin_name
                                         else:
+                                            # When truncate_skins is False, keep the full skin name with weapon name
                                             skin_name_short = skin_name
                                         final_json[players[i]["Subject"]]["Weapons"][skin].update(
                                             {

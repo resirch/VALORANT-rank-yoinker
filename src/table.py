@@ -248,11 +248,21 @@ class Table:
             elif field == "RR":
                 kwargs["justify"] = "right"
             elif field == "Name":
-                # Keep on one line and ellipsize when too long; center, with a sane max width
-                kwargs.update({"no_wrap": True, "overflow": "ellipsis", "max_width": 14})
+                # Check if names should be truncated
+                if self.config.get_feature_flag("truncate_names"):
+                    # Keep on one line and ellipsize when too long; center, with a sane max width
+                    kwargs.update({"no_wrap": True, "overflow": "ellipsis", "max_width": 14})
+                else:
+                    # Allow names to wrap/fold when truncate_names is False
+                    kwargs["no_wrap"] = True
             elif field == "Skin":
-                # Keep skin on one line and ellipsize with a capped width
-                kwargs.update({"no_wrap": True, "overflow": "ellipsis", "max_width": 18})
+                # Check if skins should be truncated
+                if self.config.get_feature_flag("truncate_skins"):
+                    # Keep skin on one line and ellipsize with a capped width
+                    kwargs.update({"no_wrap": True, "overflow": "ellipsis", "max_width": 18})
+                else:
+                    # Allow skins to wrap/fold when truncate_skins is False
+                    kwargs["no_wrap"] = True
             elif field == "Party":
                 # Show party column with no header text
                 self.rich_table.add_column("", justify="center", no_wrap=True)
@@ -261,7 +271,7 @@ class Table:
             # Check if the column should always fold (not truncated)
             if field in static_overflow_fold_columns:
                 apply_fold = True
-            # Check flags
+            # Check flags for other columns
             elif field in conditional_columns:
                 flag_name = conditional_columns[field]
                 if not self.config.get_feature_flag(flag_name):
