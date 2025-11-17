@@ -457,8 +457,14 @@ try:
                         if assignment:
                             number_str, color_hex = assignment
                             party_icon = f"[{color_hex}]{number_str}[/]"
+                            # Extract party number from the assignment (number_str is already a string like "1", "2", etc.)
+                            try:
+                                partyNum = int(number_str)
+                            except (ValueError, AttributeError):
+                                partyNum = 0
                         else:
                             party_icon = ""
+                            partyNum = 0
 
                         playerRank = rank.get_rank(player["Subject"], seasonID)
                         previousPlayerRank = rank.get_rank(
@@ -756,9 +762,15 @@ try:
                         playersLoaded += 1
                         # Assign party icon based on the assignments from party_finder
                         assignment = party_assignments.get(player["Subject"])
+                        partyNum = 0
                         if assignment:
                             number_str, color_hex = assignment
                             party_icon = f"[{color_hex}]{number_str}[/]"
+                            # Extract party number from the assignment (number_str is already a string like "1", "2", etc.)
+                            try:
+                                partyNum = int(number_str)
+                            except (ValueError, AttributeError):
+                                partyNum = 0
                         else:
                             party_icon = ""
 
@@ -781,6 +793,11 @@ try:
                                 else:
                                     # PARTY_ICON
                                     party_icon = partyIcons[party]
+                                    # Try to extract partyNum from existing partyIcons
+                                    for p, icon in partyIcons.items():
+                                        if icon == party_icon:
+                                            partyNum = PARTYICONLIST.index(icon) + 1 if icon in PARTYICONLIST else 0
+                                            break
                                 partyCount += 1
                         playerRank = rank.get_rank(player["Subject"], seasonID)
                         previousPlayerRank = rank.get_rank(
@@ -1034,9 +1051,15 @@ try:
                             playersLoaded += 1
                             # Assign party icon based on the assignments from party_finder
                             assignment = party_assignments.get(player["Subject"])
+                            partyNum = 0
                             if assignment:
                                 number_str, color_hex = assignment
                                 party_icon = f"[{color_hex}]{number_str}[/]"
+                                # Extract party number from the assignment (number_str is already a string like "1", "2", etc.)
+                                try:
+                                    partyNum = int(number_str)
+                                except (ValueError, AttributeError):
+                                    partyNum = 0
                             else:
                                 party_icon = ""
                             playerRank = rank.get_rank(player["Subject"], seasonID)
