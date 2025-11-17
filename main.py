@@ -128,7 +128,7 @@ try:
 
     current_map = coregame.get_current_map(map_urls, map_splashes)
 
-    colors = Colors(hide_names, agent_dict, AGENTCOLORLIST)
+    colors = Colors(log, hide_names, agent_dict, AGENTCOLORLIST)
 
     loadoutsClass = Loadouts(Requests, log, colors, Server, current_map, cfg)
     table = Table(cfg, log)
@@ -223,8 +223,36 @@ try:
             # asyncio.set_event_loop(loop)
             # loop.run_until_complete()
         except TypeError:
-            raise Exception("Game has not started yet!")
-        # if cfg.cooldown == 0 or game_state != lastGameState:
+            game_state = "DISCONNECTED"
+
+        if game_state == "DISCONNECTED":
+            richConsole.print("[yellow]Disconnected from Valorant. Attempting to reconnect...[/yellow]")
+            # Loop waits for the Valorant client to respond
+            while True:
+                # Rereads the lockfile
+                Requests.lockfile = Requests.get_lockfile()
+
+                if Requests.lockfile is None:
+                    time.sleep(5)
+                    continue
+
+                presence_check = presences.get_presence()
+                
+                if presence_check is not None:
+                    break 
+                
+                time.sleep(5)
+
+            richConsole.print("[green]Reconnected successfully! Loading...[/green]")
+            
+            Requests.get_headers(refresh=True)
+
+            Wss = Ws(Requests.lockfile, Requests, cfg, colors, hide_names, Server, rpc)
+
+            firstTime = True 
+            lastGameState = ""
+            continue
+
         if True:
             log(f"getting new {game_state} scoreboard")
             lastGameState = game_state
@@ -249,9 +277,20 @@ try:
                 time.sleep(5)
                 continue
             
+            # Temp fix: Riot is swapping between nested and flat API structures.
+            party_state = ""
+            if "partyPresenceData" in priv_presence: # Check for nested structure
+                party_state = priv_presence["partyPresenceData"]["partyState"]
+            elif "partyState" in priv_presence: # Check for flattened structure
+                party_state = priv_presence["partyState"]
+            else:
+                # No known structure found, log and fail
+                log("ERROR: Unknown presence API structure in 'main'.")
+                party_state = priv_presence["partyPresenceData"]["partyState"]
+            
             if (
                 priv_presence["provisioningFlow"] == "CustomGame"
-                or priv_presence["partyPresenceData"]["partyState"] == "CUSTOM_GAME_SETUP"
+                or party_state == "CUSTOM_GAME_SETUP"
             ):
                 gamemode = "Custom Game"
             else:
@@ -402,7 +441,7 @@ try:
                                             {
                                                 "times": times,
                                                 "name": agent_dict.get(
-                                                    player["CharacterID"].lower(), "Unknown Agent"
+                                                    player["CharacterID"].lower(), "Unknown"
                                                 )
                                                 + " on "
                                                 + team_string
@@ -624,7 +663,8 @@ try:
                         heartbeat_data["players"][player["Subject"]] = {
                             "puuid": player["Subject"],
                             "name": names[player["Subject"]],
-                            "agent": agent_dict.get(player["CharacterID"].lower(), "Unknown Agent"),
+                            "partyNumber": partyNum if party_icon != "" else 0,
+                            "agent": agent_dict.get(player["CharacterID"].lower(), "Unknown"),
                             "rank": playerRank["rank"],
                             "peakRank": playerRank["peakrank"],
                             "peakRankAct": peakRankAct,
@@ -657,7 +697,7 @@ try:
                             {
                                 player["Subject"]: {
                                     "name": names[player["Subject"]],
-                                    "agent": agent_dict.get(player["CharacterID"].lower(), "Unknown Agent"),
+                                    "agent": agent_dict.get(player["CharacterID"].lower(), "Unknown"),
                                     "map": current_map,
                                     "rank": playerRank["rank"],
                                     "rr": rr,
@@ -820,17 +860,17 @@ try:
                             PLcolor = colors.level_to_color(player_level)
                         if player["CharacterSelectionState"] == "locked":
                             agent_color = color(
-                                str(agent_dict.get(player["CharacterID"].lower(), "Unknown Agent")),
+                                agent_dict.get(player["CharacterID"].lower(), "Unknown"),
                                 fore=(255, 255, 255),
                             )
                         elif player["CharacterSelectionState"] == "selected":
                             agent_color = color(
-                                str(agent_dict.get(player["CharacterID"].lower(), "Unknown Agent")),
+                                agent_dict.get(player["CharacterID"].lower(), "Unknown"),
                                 fore=(128, 128, 128),
                             )
                         else:
                             agent_color = color(
-                                str(agent_dict.get(player["CharacterID"].lower(), "Unknown Agent")),
+                                agent_dict.get(player["CharacterID"].lower(), "Unknown"),
                                 fore=(54, 53, 51),
                             )
 
@@ -945,7 +985,8 @@ try:
 
                         heartbeat_data["players"][player["Subject"]] = {
                             "name": names[player["Subject"]],
-                            "agent": agent_dict.get(player["CharacterID"].lower(), "Unknown Agent"),
+                            "partyNumber": partyNum if party_icon != "" else 0,
+                            "agent": agent_dict.get(player["CharacterID"].lower(), "Unknown"),
                             "rank": playerRank["rank"],
                             "peakRank": playerRank["peakrank"],
                             "peakRankAct": peakRankAct,

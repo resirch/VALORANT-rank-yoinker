@@ -5,17 +5,13 @@ import ssl
 import base64
 import json
 import asyncio
-import time
 from colr import color
-
 
 class Ws:
     def __init__(self, lockfile, Requests, cfg, colors, hide_names, server, rpc=None):
-
-
         self.lockfile = lockfile
         self.Requests = Requests
-        # websocket.enableTrace(True)
+        self.log = Requests.log  # Inherit logger from Requests
         self.ssl_context = ssl.SSLContext(ssl.PROTOCOL_TLS_CLIENT)
         self.ssl_context.check_hostname = False
         self.ssl_context.verify_mode = ssl.CERT_NONE
@@ -36,162 +32,121 @@ class Ws:
         self.player_data = player_data
 
     async def recconect_to_websocket(self, initial_game_state):
-        #wont actually recconect :)
-        local_headers = {}
-        local_headers['Authorization'] = 'Basic ' + base64.b64encode(('riot:' + self.lockfile['password']).encode()).decode()
+        local_headers = {
+            'Authorization': 'Basic ' + base64.b64encode(('riot:' + self.lockfile['password']).encode()).decode()
+        }
         url = f"wss://127.0.0.1:{self.lockfile['port']}"
         
-        max_retries = 3
-        retry_delay = 1  # Start with 1 second delay
-        
+        max_retries = 5
+        retry_delay = 2
+
         for attempt in range(max_retries):
             try:
-                self.websocket_client = websockets.connect(url, ssl=self.ssl_context, extra_headers=local_headers)
-                async with self.websocket_client as websocket:
+                async with websockets.connect(url, ssl=self.ssl_context, extra_headers=local_headers) as websocket:
                     await websocket.send('[5, "OnJsonApiEvent_chat_v4_presences"]')
                     if self.cfg.get_feature_flag("game_chat"):
                         await websocket.send('[5, "OnJsonApiEvent_chat_v6_messages"]')
+                    
                     while True:
-                        try:
-                            response = await websocket.recv()
-                            h = self.handle(response, initial_game_state)
-                            if h is not None:
-                                await websocket.close()
-                                return h
-                        except websockets.exceptions.ConnectionClosedError as e:
-                            print(f"Websocket connection closed: {e}")
-                            # Return to MENUS state when connection is lost (Valorant closed)
-                            return "MENUS"
-                        except asyncio.exceptions.IncompleteReadError as e:
-                            print(f"Incomplete read error: {e}")
-                            # Return to MENUS state when connection is lost (Valorant closed)
-                            return "MENUS"
-            except (ConnectionRefusedError, OSError, websockets.exceptions.InvalidURI) as e:
+                        response = await websocket.recv()
+                        result = self.handle(response, initial_game_state)
+                        if result is not None:
+                            return result
+            except (websockets.exceptions.ConnectionClosed, websockets.exceptions.InvalidURI, websockets.exceptions.InvalidHandshake, ConnectionRefusedError, OSError) as e:
+                self.log(f"Websocket failed (attempt {attempt + 1}/{max_retries}): {e}")
                 if attempt < max_retries - 1:
-                    print(f"Failed to connect to Valorant client (attempt {attempt + 1}/{max_retries}): {e}")
-                    print(f"Retrying in {retry_delay} seconds...")
                     await asyncio.sleep(retry_delay)
-                    retry_delay *= 2  # Exponential backoff
+                    retry_delay *= 2
                 else:
-                    print(f"Failed to connect to Valorant client after {max_retries} attempts: {e}")
-                    print("Valorant appears to be closed. Returning to MENUS state.")
-                    return "MENUS"
+                    self.log(f"Websocket failed after {max_retries} attempts.")
+                    return "DISCONNECTED"
             except Exception as e:
-                if attempt < max_retries - 1:
-                    print(f"Unexpected websocket error (attempt {attempt + 1}/{max_retries}): {e}")
-                    print(f"Retrying in {retry_delay} seconds...")
-                    await asyncio.sleep(retry_delay)
-                    retry_delay *= 2  # Exponential backoff
-                else:
-                    print(f"Unexpected websocket error after {max_retries} attempts: {e}")
-                    return "MENUS"
+                self.log(f"Unexpected websocket error: {e}")
+                return "DISCONNECTED"
         
-        # If we get here, all retries failed
-        return "MENUS"
+        return "DISCONNECTED"
 
     def handle(self, m, initial_game_state):
-        # Check if message is valid and not empty
-        if not m or len(m) <= 10:
-            return None
-            
-        # Check if message looks like JSON (starts with [ or {)
-        if not (m.strip().startswith('[') or m.strip().startswith('{')):
-            return None
-            
         try:
-            resp_json = json.loads(m)
-        except json.JSONDecodeError as e:
-            # Skip malformed JSON messages - this can happen when websocket receives empty or corrupted data
-            print(f"Warning: Skipping malformed JSON message: {e}")
-            return None
-            
-        if resp_json[2].get("uri") == "/chat/v4/presences":
-            if "data" not in resp_json[2] or "presences" not in resp_json[2]["data"]:
+            if not m or len(m) <= 10:
                 return None
-            presence = resp_json[2]["data"]["presences"][0]
-            if presence['puuid'] == self.Requests.puuid:
-                if presence.get("championId") is not None or presence.get("product") == "league_of_legends":
+            resp_json = json.loads(m)
+        except (json.JSONDecodeError, TypeError):
+            self.log(f"JSONDecodeError: Failed to parse websocket message. Data: {m}")
+            return None
+
+        if resp_json[2].get("uri") == "/chat/v4/presences":
+            presence = resp_json[2].get("data", {}).get("presences", [{}])[0]
+            if presence.get('puuid') == self.Requests.puuid:
+                
+                if presence.get("product") == "league_of_legends":
+                    return None
+                
+                try:
+                    private_data = json.loads(base64.b64decode(presence['private']))
+                    
+                    # Temp fix: Riot is swapping between nested and flat API structures.
                     state = None
-                else:
-                    # Check if private data exists and is not None
-                    if presence.get('private') is None:
-                        state = None
+                    if "matchPresenceData" in private_data: # Check for nested structure
+                        state = private_data.get("matchPresenceData", {}).get("sessionLoopState")
+                    elif "sessionLoopState" in private_data: # Check for flattened structure
+                        state = private_data.get("sessionLoopState")
                     else:
-                        try:
-                            # Check if private data exists and is not None before decoding
-                            if presence.get('private') is not None:
-                                private_data = json.loads(base64.b64decode(presence['private']))
-                                state = private_data["matchPresenceData"]["sessionLoopState"]
-                            else:
-                                state = None
-                        except (json.JSONDecodeError, KeyError, TypeError) as e:
-                            print(f"Warning: Failed to decode private presence data: {e}")
-                            state = None
+                        # No known structure found, log and fail
+                        self.log(f"ERROR: Unknown presence API structure in 'websocket.handle': {private_data}")
+                        state = private_data["matchPresenceData"]["sessionLoopState"]
+
+                except (json.JSONDecodeError, KeyError, TypeError) as e:
+                    self.log(f"Failed to decode private presence data: {e}")
+                    state = None
 
                 if state is not None:
-                    if self.cfg.get_feature_flag("discord_rpc") and presence.get('private') is not None:
-                        try:
-                            # Additional check to ensure private data is not None before decoding
-                            if presence.get('private') is not None:
-                                self.rpc.set_rpc(json.loads(base64.b64decode(presence['private'])))
-                        except (json.JSONDecodeError, KeyError, TypeError) as e:
-                            print(f"Warning: Failed to set RPC data: {e}")
+                    if self.cfg.get_feature_flag("discord_rpc") and private_data:
+                        self.rpc.set_rpc(private_data)
                     if state != initial_game_state:
                         self.messages = 0
                         self.message_history = []
                         return state
-        if resp_json[2].get("uri") == "/chat/v6/messages":
-            if "data" not in resp_json[2] or "messages" not in resp_json[2]["data"]:
-                return None
-            message = resp_json[2]["data"]["messages"][0]
-            #currently only game chat no pregame or menu
-            if "ares-coregame" in message["cid"]:
-                if message["id"] not in self.id_seen:
-                    for player in self.player_data:
-                        if player == self.Requests.puuid:
-                            self.ally_team = self.player_data[player]["team"]
-                    if message["puuid"] == self.Requests.puuid:
-                        clr = (221, 224, 41)
-                    elif self.player_data[message["puuid"]]["team"] == self.ally_team:
-                        clr = (76, 151, 237)
-                    else:
-                        clr = (238, 77, 77)
 
-                    chat_indicator = message["cid"].split("@")[0].rsplit("-", 1)[1]
-                    if chat_indicator == "blue":
-                        chat_prefix = color("[Team]", fore=(116, 162, 214))
-                    else:
-                        chat_prefix = "[All]"
+        elif resp_json[2].get("uri") == "/chat/v6/messages":
+            message = resp_json[2].get("data", {}).get("messages", [{}])[0]
+            if "ares-coregame" in message.get("cid", "") and message.get("id") not in self.id_seen:
+                
+                self.ally_team = self.player_data.get(self.Requests.puuid, {}).get("team")
+                
+                msg_puuid = message['puuid']
+                msg_player_data = self.player_data.get(msg_puuid, {})
 
-                    agent = self.colors.get_agent_from_uuid(self.player_data[message['puuid']]['agent'].lower())
-                    name = f"{message['game_name']}#{message['game_tag']}"
-                    if self.player_data[message['puuid']]['streamer_mode'] and self.hide_names and message['puuid'] not in self.player_data["ignore"]:
-                        self.print_message(f"{chat_prefix} {color(self.colors.escape_ansi(agent), clr)}: {message['body']}")
-                        self.server.send_payload("chat",{
-                            "time": message["time"],
-                            "puuid": player,
-                            "self": message["puuid"] == self.Requests.puuid,
-                            "group":re.sub("\[|\]","",self.colors.escape_ansi(chat_prefix)),
-                            "agent": self.colors.escape_ansi(agent),
-                            "text": message['body']
-                        })
-                    else:
-                        if agent == "":
-                            agent_str = ""
-                        else:
-                            agent_str = f" ({agent})"
-                        self.print_message(f"{chat_prefix} {color(name, clr)}{agent_str}: {message['body']}")
-                        self.server.send_payload("chat",{
-                            "time": message["time"],
-                            "puuid": player,
-                            "self": message["puuid"] == self.Requests.puuid,
-                            "group": re.sub("\[|\]","",self.colors.escape_ansi(
-	                                chat_prefix)),
-                            "player": name,
-                            "agent": self.colors.escape_ansi(agent),
-                            "text": message['body']
-                        })
-                    self.id_seen.append(message['id'])
+                if msg_puuid == self.Requests.puuid:
+                    clr = (221, 224, 41)
+                elif msg_player_data.get("team") == self.ally_team:
+                    clr = (76, 151, 237)
+                else:
+                    clr = (238, 77, 77)
+
+                chat_indicator = message["cid"].split("@")[0].rsplit("-", 1)[1]
+                chat_prefix = color("[Team]", fore=(116, 162, 214)) if chat_indicator == "blue" else "[All]"
+
+                agent = self.colors.get_agent_from_uuid(msg_player_data.get('agent', '').lower())
+                name = f"{message['game_name']}#{message['game_tag']}"
+                
+                if msg_player_data.get('streamer_mode') and self.hide_names and msg_puuid not in self.player_data.get("ignore", []):
+                    self.print_message(f"{chat_prefix} {color(self.colors.escape_ansi(agent), clr)}: {message['body']}")
+                    self.server.send_payload("chat", {
+                        "time": message["time"], "puuid": msg_puuid, "self": msg_puuid == self.Requests.puuid,
+                        "group": re.sub(r"\[|\]", "", self.colors.escape_ansi(chat_prefix)),
+                        "agent": self.colors.escape_ansi(agent), "text": message['body']
+                    })
+                else:
+                    agent_str = f" ({agent})" if agent else ""
+                    self.print_message(f"{chat_prefix} {color(name, clr)}{agent_str}: {message['body']}")
+                    self.server.send_payload("chat", {
+                        "time": message["time"], "puuid": msg_puuid, "self": msg_puuid == self.Requests.puuid,
+                        "group": re.sub(r"\[|\]", "", self.colors.escape_ansi(chat_prefix)),
+                        "player": name, "agent": self.colors.escape_ansi(agent), "text": message['body']
+                    })
+                self.id_seen.append(message['id'])
+        return None
 
     def print_message(self, message):
         self.messages += 1

@@ -9,12 +9,24 @@ class Presences:
 
     def get_presence(self):
         presences = self.Requests.fetch(url_type="local", endpoint="/chat/v4/presences", method="get")
+        if presences is None:
+            return None
         return presences['presences']
 
     def get_game_state(self, presences):
         private_presence = self.get_private_presence(presences)
         if private_presence:
-            return private_presence["matchPresenceData"]["sessionLoopState"]
+            # Temp fix: Riot is swapping between nested and flat API structures.
+            # Check for nested structure.
+            if "matchPresenceData" in private_presence:
+                return private_presence["matchPresenceData"]["sessionLoopState"]
+            # Check for flattened structure.
+            elif "sessionLoopState" in private_presence:
+                return private_presence["sessionLoopState"]
+            else:
+                # No known structure found, log and fail
+                self.log("ERROR: Unknown presence API structure in 'get_game_state'.")
+                return private_presence["matchPresenceData"]["sessionLoopState"]
         return None
 
     def get_private_presence(self, presences):
@@ -26,9 +38,11 @@ class Presences:
                 if presence.get("championId") is not None or presence.get("product") == "league_of_legends":
                     return None
                 else:
+                    if presence['private'] == "": 
+                        return None
                     decoded_private = json.loads(base64.b64decode(presence['private']))
                     # Debug
-                    # print(f"DEBUG: Decoded Private Presence -> {decoded_private}")
+                    # self.log(f"DEBUG: Decoded Private Presence -> {decoded_private}")
                     return decoded_private
         return None
 
