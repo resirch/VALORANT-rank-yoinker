@@ -1,65 +1,171 @@
 @echo off
 setlocal EnableDelayedExpansion
 
+REM Change directory to batch script path
+cd /d "%~dp0"
+
 REM Define supported Python versions X.Y.Z for easy future updates
 set SUPPORTED_MIN_VERSION=3.10
 set SUPPORTED_MAX_VERSION=3.11.9
 
-REM Extract for numeric comparison
-for /f "tokens=1-3 delims=." %%a in ("%SUPPORTED_MIN_VERSION%") do (
-    set /a MIN_MAJOR=%%a
-    set /a MIN_MINOR=%%b
-    set /a MIN_PATCH=%%c
+REM Try to find a supported Python version using py launcher (prefer 3.11, then 3.10)
+set PYTHON_CMD=
+set PYTHON_VERSION_FOUND=
+set USE_PY_LAUNCHER=0
+
+for /f "tokens=*" %%I in ('py -3.11 --version 2^>nul') do (
+    set PYTHON_CMD=py -3.11
+    set PYTHON_VERSION_FOUND=3.11
+    set USE_PY_LAUNCHER=1
 )
-for /f "tokens=1-3 delims=." %%a in ("%SUPPORTED_MAX_VERSION%") do (
-    set /a MAX_MAJOR=%%a
-    set /a MAX_MINOR=%%b
-    set /a MAX_PATCH=%%c
+if not defined PYTHON_CMD (
+    for /f "tokens=*" %%I in ('py -3.10 --version 2^>nul') do (
+        set PYTHON_CMD=py -3.10
+        set PYTHON_VERSION_FOUND=3.10
+        set USE_PY_LAUNCHER=1
+    )
 )
 
-if not defined MIN_PATCH set /a MIN_PATCH=0
-if not defined MAX_PATCH set /a MAX_PATCH=0
+REM If py launcher didn't work, try direct python commands
+if not defined PYTHON_CMD (
+    for /f "tokens=2 delims= " %%I in ('python --version 2^>nul') do (
+        set PYTHON_VERSION=%%I
+        for /f "tokens=1-2 delims=." %%a in ("!PYTHON_VERSION!") do (
+            if "%%a"=="3" (
+                if "%%b"=="10" (
+                    set PYTHON_CMD=python
+                    set PYTHON_VERSION_FOUND=3.10
+                    set USE_PY_LAUNCHER=0
+                )
+                if "%%b"=="11" (
+                    set PYTHON_CMD=python
+                    set PYTHON_VERSION_FOUND=3.11
+                    set USE_PY_LAUNCHER=0
+                )
+            )
+        )
+    )
+)
 
-REM Get Python version
-for /f "tokens=2 delims= " %%I in ('python --version 2^>nul') do set PYTHON_VERSION=%%I
+REM If still not found, try to install via winget
+if not defined PYTHON_CMD (
+    echo.
+    echo Python %SUPPORTED_MIN_VERSION% or %SUPPORTED_MAX_VERSION% is not installed.
+    echo.
+    
+    REM Check if winget is available
+    where winget >nul 2>&1
+    if %errorlevel% equ 0 (
+        echo Attempting to install Python 3.11 via winget...
+        echo This will install Python 3.11 system-wide, but we'll use it only in the virtual environment.
+        echo.
+        winget install Python.Python.3.11 --silent --accept-package-agreements --accept-source-agreements
+        if %errorlevel% equ 0 (
+            echo.
+            echo Python 3.11 installed successfully. Refreshing Python launcher...
+            REM Refresh py launcher
+            py -0
+            REM Try again
+            for /f "tokens=*" %%I in ('py -3.11 --version 2^>nul') do (
+                set PYTHON_CMD=py -3.11
+                set PYTHON_VERSION_FOUND=3.11
+                set USE_PY_LAUNCHER=1
+            )
+        ) else (
+            echo.
+            echo Winget installation failed. Trying Python 3.10...
+            winget install Python.Python.3.10 --silent --accept-package-agreements --accept-source-agreements
+            if %errorlevel% equ 0 (
+                echo.
+                echo Python 3.10 installed successfully. Refreshing Python launcher...
+                py -0
+                for /f "tokens=*" %%I in ('py -3.10 --version 2^>nul') do (
+                    set PYTHON_CMD=py -3.10
+                    set PYTHON_VERSION_FOUND=3.10
+                    set USE_PY_LAUNCHER=1
+                )
+            )
+        )
+    )
+)
 
-REM Check if Python is installed
-if not defined PYTHON_VERSION (
-    call :error "Python is not installed. Please install Python %SUPPORTED_MIN_VERSION% or %SUPPORTED_MAX_VERSION%."
+REM Check if we found a supported Python version
+if not defined PYTHON_CMD (
+    call :error "Python %SUPPORTED_MIN_VERSION% or %SUPPORTED_MAX_VERSION% is not installed and could not be auto-installed.^
+Please install Python %SUPPORTED_MIN_VERSION% or %SUPPORTED_MAX_VERSION% manually from https://www.python.org/downloads/"
     exit /b
 )
 
-REM Extract the version number
-for /f "tokens=1-3 delims=." %%a in ("!PYTHON_VERSION!") do (
-    set MAJOR=%%a
-    set MINOR=%%b
-    set PATCH=%%c
+REM Get the actual version for display
+if !USE_PY_LAUNCHER! equ 1 (
+    for /f "tokens=2 delims= " %%I in ('"!PYTHON_CMD!" --version 2^>nul') do set PYTHON_VERSION=%%I
+) else (
+    for /f "tokens=2 delims= " %%I in ('%PYTHON_CMD% --version 2^>nul') do set PYTHON_VERSION=%%I
 )
 
-if not defined PATCH set PATCH=0
-
-REM Convert to numeric
-set /a MAJOR_NUM=!MAJOR!
-set /a MINOR_NUM=!MINOR!
-set /a PATCH_NUM=!PATCH!
-
-REM Compare versions
-call :compare_versions !MAJOR_NUM! !MINOR_NUM! !PATCH_NUM! %MIN_MAJOR% %MIN_MINOR% %MIN_PATCH% min_result
-call :compare_versions !MAJOR_NUM! !MINOR_NUM! !PATCH_NUM! %MAX_MAJOR% %MAX_MINOR% %MAX_PATCH% max_result
-
-if !min_result! lss 0 (
-    call :error "Python version !PYTHON_VERSION! is lower than %SUPPORTED_MIN_VERSION%. Please install Python %SUPPORTED_MIN_VERSION% or %SUPPORTED_MAX_VERSION%."
+echo.
+echo Found Python version: !PYTHON_VERSION!
+echo.
+set VENV_NAME=venv
+if not exist venv goto create_venv
+echo Virtual environment already exists. Recreating with correct Python version...
+echo Renaming old virtual environment...
+if exist venv_old rmdir /s /q venv_old 2>nul
+ren venv venv_old 2>nul
+if exist venv\Scripts\activate.bat (
+    echo Warning: Could not rename old venv (may be in use). Creating new venv with temporary name...
+    set VENV_NAME=venv_new
+)
+:create_venv
+echo Creating virtual environment with Python version !PYTHON_VERSION!
+if !USE_PY_LAUNCHER! equ 1 (
+    !PYTHON_CMD! -m venv !VENV_NAME!
+) else (
+    %PYTHON_CMD% -m venv !VENV_NAME!
+)
+if !errorlevel! neq 0 (
+    call :error "Failed to create virtual environment. Please check the output above for more details."
     exit /b
 )
 
-if !max_result! gtr 0 (
-    call :error "Python version !PYTHON_VERSION! is greater than %SUPPORTED_MAX_VERSION%. Please install Python %SUPPORTED_MIN_VERSION% or %SUPPORTED_MAX_VERSION%."
+REM If we created venv_new, rename it to venv and clean up old one
+if exist venv_new\Scripts\activate.bat (
+    echo Replacing old virtual environment...
+    if exist venv_old rmdir /s /q venv_old 2>nul
+    if exist venv\Scripts\activate.bat ren venv venv_old 2>nul
+    ren venv_new venv 2>nul
+    if exist venv_old (
+        echo Cleaning up old virtual environment in background...
+        start /b "" cmd /c "timeout /t 3 /nobreak >nul && rmdir /s /q venv_old"
+    )
+)
+
+REM Activate virtual environment and install requirements
+echo.
+echo Activating virtual environment and installing requirements...
+call "venv\Scripts\activate.bat"
+if !errorlevel! neq 0 (
+    call :error "Failed to activate virtual environment."
+    exit /b
+)
+
+REM Verify we're using the correct Python version in venv
+for /f "tokens=2 delims= " %%I in ('python --version 2^>nul') do set VENV_PYTHON_VERSION=%%I
+echo.
+echo Virtual environment is using Python !VENV_PYTHON_VERSION!
+echo.
+
+REM Upgrade pip in venv
+python -m pip install --upgrade pip --quiet
+if !errorlevel! neq 0 (
+    call :error "Failed to upgrade pip. Please check the output above for more details."
     exit /b
 )
 
 REM Install requirements
+echo Installing requirements...
 pip install -r requirements.txt
-if %errorlevel% neq 0 (
+if !errorlevel! neq 0 (
     call :error "There was an error installing the requirements. Please check the output above for more details."
     exit /b
 )
@@ -71,21 +177,15 @@ echo.
 echo.
 echo.
 echo.
-echo Requirements were successfully installed.
-echo Use START.bat to start.
+echo Requirements were successfully installed in virtual environment.
+echo Virtual environment uses Python !VENV_PYTHON_VERSION! (isolated from system Python).
+echo Use START.bat to start the application.
 echo.
 echo.
 echo.
 echo Press any key to exit...
 pause >nul
 exit /b
-
-REM Compare two versions
-:compare_versions
-set /a v1=%1*10000 + %2*100 + %3
-set /a v2=%4*10000 + %5*100 + %6
-set /a %7=v1 - v2
-goto :eof
 
 REM Display error message
 :error
