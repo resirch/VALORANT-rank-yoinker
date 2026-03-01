@@ -22,6 +22,8 @@ FLAGS_OPTS = {
     "peak_rank_act": "Peak Rank Act",
     "discord_rpc": "Discord Rich Presence",
     "aggregate_rank_rr": "Display Rank and Ranked Rating in the same column",
+    "party_finder": "Detect parties from match history",
+    "party_colorblind": "Party numbers (colorblind-friendly)",
     "server_id": "Show Server Region ID",
     "short_ranks": "Short rank names instead of long ones",
     "truncate_skins": "Truncate long skin names if the window is too small",

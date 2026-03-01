@@ -213,6 +213,7 @@ DEFAULT_CONFIG = {
             "discord_rpc": True,
             "aggregate_rank_rr": True,
             "party_finder": True,
+            "party_colorblind": True,
             "server_id": False,
             "short_ranks": False,
             "truncate_skins": True,

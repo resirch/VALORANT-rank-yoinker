@@ -760,13 +760,13 @@ try:
                             f"Loading players... [{playersLoaded}/{len(Players)}]"
                         )
                         playersLoaded += 1
-                        # Assign party icon based on the assignments from party_finder
+                        # Assign party icon: numbers (colorblind) when party_finder+party_colorblind, else blocks from game party API
                         assignment = party_assignments.get(player["Subject"])
                         partyNum = 0
-                        if assignment:
+                        use_party_numbers = cfg.get_feature_flag("party_finder") and cfg.get_feature_flag("party_colorblind")
+                        if use_party_numbers and assignment:
                             number_str, color_hex = assignment
                             party_icon = f"[{color_hex}]{number_str}[/]"
-                            # Extract party number from the assignment (number_str is already a string like "1", "2", etc.)
                             try:
                                 partyNum = int(number_str)
                             except (ValueError, AttributeError):
@@ -774,31 +774,26 @@ try:
                         else:
                             party_icon = ""
 
-                        # --- Find Parties (Removed from here) ---
-                        # player_puuids = [player["Subject"] for player in Players]
-                        # log(f"Player PUUIDs for party check: {player_puuids}")
-                        # party_assignments = find_parties(player_puuids, Requests, log)
-                        # --- End Find Parties ---
-
-                        # set party premade icon
-                        for party in partyOBJ:
-                            if player["Subject"] in partyOBJ[party]:
-                                if party not in partyIcons:
-                                    partyIcons.update(
-                                        {party: PARTYICONLIST[partyCount]}
-                                    )
-                                    # PARTY_ICON
-                                    party_icon = PARTYICONLIST[partyCount]
-                                    partyNum = partyCount + 1
-                                else:
-                                    # PARTY_ICON
-                                    party_icon = partyIcons[party]
-                                    # Try to extract partyNum from existing partyIcons
-                                    for p, icon in partyIcons.items():
-                                        if icon == party_icon:
-                                            partyNum = PARTYICONLIST.index(icon) + 1 if icon in PARTYICONLIST else 0
-                                            break
-                                partyCount += 1
+                        # set party premade icon (blocks) when NOT using party numbers
+                        if not use_party_numbers:
+                            for party in partyOBJ:
+                                if player["Subject"] in partyOBJ[party]:
+                                    if party not in partyIcons:
+                                        partyIcons.update(
+                                            {party: PARTYICONLIST[partyCount]}
+                                        )
+                                        # PARTY_ICON
+                                        party_icon = PARTYICONLIST[partyCount]
+                                        partyNum = partyCount + 1
+                                    else:
+                                        # PARTY_ICON
+                                        party_icon = partyIcons[party]
+                                        # Try to extract partyNum from existing partyIcons
+                                        for p, icon in partyIcons.items():
+                                            if icon == party_icon:
+                                                partyNum = PARTYICONLIST.index(icon) + 1 if icon in PARTYICONLIST else 0
+                                                break
+                                    partyCount += 1
                         playerRank = rank.get_rank(player["Subject"], seasonID)
                         previousPlayerRank = rank.get_rank(
                             player["Subject"], previousSeasonID
