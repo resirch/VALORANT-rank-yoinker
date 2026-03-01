@@ -188,8 +188,10 @@ try:
                 run = True
                 while run:
                     presence = presences.get_presence()
+                    if presence is None:
+                        time.sleep(2)
+                        continue
                     private_presence = presences.get_private_presence(presence)
-                    # wait until your own valorant presence is initialized
                     if private_presence is not None:
                         if cfg.get_feature_flag("discord_rpc"):
                             rpc.set_rpc(private_presence)
@@ -226,9 +228,7 @@ try:
 
         if game_state == "DISCONNECTED":
             richConsole.print("[yellow]Disconnected from Valorant. Attempting to reconnect...[/yellow]")
-            # Loop waits for the Valorant client to respond
             while True:
-                # Rereads the lockfile
                 Requests.lockfile = Requests.get_lockfile()
 
                 if Requests.lockfile is None:
@@ -236,10 +236,14 @@ try:
                     continue
 
                 presence_check = presences.get_presence()
-                
-                if presence_check is not None:
-                    break 
-                
+                if presence_check is None:
+                    time.sleep(5)
+                    continue
+
+                private_presence_check = presences.get_private_presence(presence_check)
+                if private_presence_check is not None:
+                    break
+
                 time.sleep(5)
 
             richConsole.print("[green]Reconnected successfully! Loading...[/green]")
