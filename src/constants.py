@@ -1,11 +1,10 @@
 import requests
 from colr import color
 
-version = "2.91"
+version = "2.92"
 enablePrivateLogging = True
 hide_names = False
 hide_levels = False
-
 
 gamemodes = {
     "newmap": "New Map",
@@ -19,6 +18,7 @@ gamemodes = {
     "hurm": "Team Deathmatch",
     "custom": "Custom",
     "snowball": "Snowball Fight",
+    "valaram": "All Random One Site",
     "": "Custom",
 }
 
@@ -41,6 +41,7 @@ before_ascendant_seasons = [
     "3e47230a-463c-a301-eb7d-67bb60357d4f",
     "808202d6-4f2b-a8ff-1feb-b3a0590ad79f",
 ]
+
 sockets = {
     "skin": "bcef87d6-209b-46c6-8b19-fbe40bd95abc",
     "skin_level": "e7c63390-eda7-46e0-bb7a-a6abdacd2433",
@@ -48,8 +49,6 @@ sockets = {
     "skin_buddy": "77258665-71d1-4623-bc72-44db9bd5b3b3",
     "skin_buddy_level": "dd3bf334-87f3-40bd-b043-682a57a8dc3a"
 }
-
-
 
 AGENTCOLORLIST = {
     "none": (100, 100, 100),
@@ -79,51 +78,52 @@ AGENTCOLORLIST = {
     "iso": (87, 74, 194),
     "clove": (242, 143, 208),
     "tejo": (255, 183, 97),
+    "veto": (30, 60, 90),
+    "waylay": (130, 195, 235),
 }
 
 symbol = "■"
 PARTYICONLIST = [
-            color(symbol, fore=(227, 67, 67)),
-            color(symbol, fore=(216, 67, 227)),
-            color(symbol, fore=(67, 70, 227)),
-            color(symbol, fore=(67, 227, 208)),
-            color(symbol, fore=(94, 227, 67)),
-            color(symbol, fore=(226, 237, 57)),
-            color(symbol, fore=(212, 82, 207)),
-            symbol
-        ]
-
+    color(symbol, fore=(227, 67, 67)),
+    color(symbol, fore=(216, 67, 227)),
+    color(symbol, fore=(67, 70, 227)),
+    color(symbol, fore=(67, 227, 208)),
+    color(symbol, fore=(94, 227, 67)),
+    color(symbol, fore=(226, 237, 57)),
+    color(symbol, fore=(212, 82, 207)),
+    symbol
+]
 
 NUMBERTORANKS = [
-            color('Unranked', fore=(46, 46, 46)),
-            color('Unranked', fore=(46, 46, 46)),
-            color('Unranked', fore=(46, 46, 46)),
-            color('Iron 1', fore=(72, 69, 62)),
-            color('Iron 2', fore=(72, 69, 62)),
-            color('Iron 3', fore=(72, 69, 62)),
-            color('Bronze 1', fore=(187, 143, 90)),
-            color('Bronze 2', fore=(187, 143, 90)),
-            color('Bronze 3', fore=(187, 143, 90)),
-            color('Silver 1', fore=(174, 178, 178)),
-            color('Silver 2', fore=(174, 178, 178)),
-            color('Silver 3', fore=(174, 178, 178)),
-            color('Gold 1', fore=(197, 186, 63)),
-            color('Gold 2', fore=(197, 186, 63)),
-            color('Gold 3', fore=(197, 186, 63)),
-            color('Platinum 1', fore=(24, 167, 185)),
-            color('Platinum 2', fore=(24, 167, 185)),
-            color('Platinum 3', fore=(24, 167, 185)),
-            color('Diamond 1', fore=(216, 100, 199)),
-            color('Diamond 2', fore=(216, 100, 199)),
-            color('Diamond 3', fore=(216, 100, 199)),
-            color('Ascendant 1', fore=(24, 148, 82)),
-            color('Ascendant 2', fore=(24, 148, 82)),
-            color('Ascendant 3', fore=(24, 148, 82)),
-            color('Immortal 1', fore=(221, 68, 68)),
-            color('Immortal 2', fore=(221, 68, 68)),
-            color('Immortal 3', fore=(221, 68, 68)),
-            color('Radiant', fore=(255, 253, 205)),
-        ]
+    color('Unranked', fore=(46, 46, 46)),
+    color('Unranked', fore=(46, 46, 46)),
+    color('Unranked', fore=(46, 46, 46)),
+    color('Iron 1', fore=(72, 69, 62)),
+    color('Iron 2', fore=(72, 69, 62)),
+    color('Iron 3', fore=(72, 69, 62)),
+    color('Bronze 1', fore=(187, 143, 90)),
+    color('Bronze 2', fore=(187, 143, 90)),
+    color('Bronze 3', fore=(187, 143, 90)),
+    color('Silver 1', fore=(174, 178, 178)),
+    color('Silver 2', fore=(174, 178, 178)),
+    color('Silver 3', fore=(174, 178, 178)),
+    color('Gold 1', fore=(197, 186, 63)),
+    color('Gold 2', fore=(197, 186, 63)),
+    color('Gold 3', fore=(197, 186, 63)),
+    color('Platinum 1', fore=(24, 167, 185)),
+    color('Platinum 2', fore=(24, 167, 185)),
+    color('Platinum 3', fore=(24, 167, 185)),
+    color('Diamond 1', fore=(216, 100, 199)),
+    color('Diamond 2', fore=(216, 100, 199)),
+    color('Diamond 3', fore=(216, 100, 199)),
+    color('Ascendant 1', fore=(24, 148, 82)),
+    color('Ascendant 2', fore=(24, 148, 82)),
+    color('Ascendant 3', fore=(24, 148, 82)),
+    color('Immortal 1', fore=(221, 68, 68)),
+    color('Immortal 2', fore=(221, 68, 68)),
+    color('Immortal 3', fore=(221, 68, 68)),
+    color('Radiant', fore=(255, 253, 205)),
+]
 
 SHORT_NUMBERTORANKS = [
     color('UnR', fore=(46, 46, 46)),
@@ -157,19 +157,20 @@ SHORT_NUMBERTORANKS = [
 ]
 
 tierDict = {
-            "0cebb8be-46d7-c12a-d306-e9907bfc5a25": (0, 149, 135),
-            "e046854e-406c-37f4-6607-19a9ba8426fc": (241, 184, 45),
-            "60bca009-4182-7998-dee7-b8a2558dc369": (209, 84, 141),
-            "12683d76-48d7-84a3-4e09-6985794f0445": (90, 159, 226),
-            "411e4a55-4e59-7757-41f0-86a53f101bb5": (239, 235, 101),
-            None: None
-        }
+    "0cebb8be-46d7-c12a-d306-e9907bfc5a25": (0, 149, 135),
+    "e046854e-406c-37f4-6607-19a9ba8426fc": (241, 184, 45),
+    "60bca009-4182-7998-dee7-b8a2558dc369": (209, 84, 141),
+    "12683d76-48d7-84a3-4e09-6985794f0445": (90, 159, 226),
+    "411e4a55-4e59-7757-41f0-86a53f101bb5": (239, 235, 101),
+    None: None
+}
 
 WEAPONS = [
     "Classic",
     "Shorty",
     "Frenzy",
     "Ghost",
+    "Bandit",
     "Sheriff",
     "Stinger",
     "Spectre",
@@ -188,138 +189,106 @@ WEAPONS = [
 ]
 
 DEFAULT_CONFIG = {
-        "cooldown": 10,
-        "port": 1100,
-        "weapon": "Vandal",
-        "chat_limit": 5,
-        "table": {
-            "skin": True,
-            "rr": True,
-            "earned_rr": True,
-            "peakrank": True,
-            "previousrank" : False,
-            "leaderboard": True,
-            "headshot_percent": True,
-            "winrate": True,
-            "kd": False,
-            "level": True
-        },
-        "flags": {
-            "last_played": True,
-            "auto_hide_leaderboard": True,
-            "pre_cls": False,
-            "game_chat": True,
-            "peak_rank_act": True,
-            "discord_rpc": True,
-            "aggregate_rank_rr": True,
-            "party_finder": True,
-            "party_colorblind": True,
-            "server_id": False,
-            "short_ranks": False,
-            "truncate_skins": True,
-            "truncate_names": True,
-            "truncate_ranks": True,
-            "roman_numerals": True,
-            "starting_side": False
-        }
+    "cooldown": 10,
+    "port": 1100,
+    "weapon": "Vandal",
+    "chat_limit": 5,
+    "table": {
+        "skin": True,
+        "rr": True,
+        "earned_rr": True,
+        "peakrank": True,
+        "previousrank": False,
+        "leaderboard": True,
+        "headshot_percent": True,
+        "winrate": True,
+        "kd": False,
+        "level": True
+    },
+    "flags": {
+        "last_played": True,
+        "auto_hide_leaderboard": True,
+        "pre_cls": False,
+        "game_chat": True,
+        "peak_rank_act": True,
+        "discord_rpc": True,
+        "aggregate_rank_rr": True,
+        "party_finder": True,
+        "party_colorblind": True,
+        "server_id": False,
+        "short_ranks": False,
+        "truncate_skins": True,
+        "truncate_names": True,
+        "truncate_ranks": True,
+        "roman_numerals": True,
+        "starting_side": False
     }
+}
 
 def format_rank_with_square(rank_number, rr_value=0, is_peak_rank=False, config=None):
-    """
-    Format rank in the new format: [Color Square] [Rank Abbreviation] [Roman Numeral] ([Number])
-    For unrated: - Unrated (grey, no RR)
-    """
     if rank_number == 0:
-        # Grey, same as other N/A style values, and no RR suffix
-        # Keep as simple text so it aligns with left part in split cells
         return color("- Unrated", fore=(46, 46, 46))
-    
-    # Get config settings
-    truncate_ranks = True  # Default to True for backward compatibility
-    roman_numerals = True  # Default to True for backward compatibility
-    
+
+    truncate_ranks = True
+    roman_numerals = True
+
     if config and hasattr(config, 'get_feature_flag'):
         truncate_ranks = config.get_feature_flag("truncate_ranks")
         roman_numerals = config.get_feature_flag("roman_numerals")
-    
-    # Rank abbreviations (short)
+
     rank_abbreviations_short = {
-        3: "Irn", 4: "Irn", 5: "Irn",  # Iron
-        6: "Brz", 7: "Brz", 8: "Brz",  # Bronze  
-        9: "Slv", 10: "Slv", 11: "Slv", # Silver
-        12: "Gld", 13: "Gld", 14: "Gld", # Gold
-        15: "Plt", 16: "Plt", 17: "Plt", # Platinum
-        18: "Dia", 19: "Dia", 20: "Dia", # Diamond
-        21: "Asc", 22: "Asc", 23: "Asc", # Ascendant
-        24: "Imm", 25: "Imm", 26: "Imm", # Immortal
-        27: "Rad"  # Radiant
+        3: "Irn", 4: "Irn", 5: "Irn",
+        6: "Brz", 7: "Brz", 8: "Brz",
+        9: "Slv", 10: "Slv", 11: "Slv",
+        12: "Gld", 13: "Gld", 14: "Gld",
+        15: "Plt", 16: "Plt", 17: "Plt",
+        18: "Dia", 19: "Dia", 20: "Dia",
+        21: "Asc", 22: "Asc", 23: "Asc",
+        24: "Imm", 25: "Imm", 26: "Imm",
+        27: "Rad"
     }
-    
-    # Rank abbreviations (full)
+
     rank_abbreviations_full = {
-        3: "Iron", 4: "Iron", 5: "Iron",  # Iron
-        6: "Bronze", 7: "Bronze", 8: "Bronze",  # Bronze  
-        9: "Silver", 10: "Silver", 11: "Silver", # Silver
-        12: "Gold", 13: "Gold", 14: "Gold", # Gold
-        15: "Platinum", 16: "Platinum", 17: "Platinum", # Platinum
-        18: "Diamond", 19: "Diamond", 20: "Diamond", # Diamond
-        21: "Ascendant", 22: "Ascendant", 23: "Ascendant", # Ascendant
-        24: "Immortal", 25: "Immortal", 26: "Immortal", # Immortal
-        27: "Radiant"  # Radiant
+        3: "Iron", 4: "Iron", 5: "Iron",
+        6: "Bronze", 7: "Bronze", 8: "Bronze",
+        9: "Silver", 10: "Silver", 11: "Silver",
+        12: "Gold", 13: "Gold", 14: "Gold",
+        15: "Platinum", 16: "Platinum", 17: "Platinum",
+        18: "Diamond", 19: "Diamond", 20: "Diamond",
+        21: "Ascendant", 22: "Ascendant", 23: "Ascendant",
+        24: "Immortal", 25: "Immortal", 26: "Immortal",
+        27: "Radiant"
     }
-    
-    # Choose abbreviation based on truncate_ranks setting
+
     rank_abbreviations = rank_abbreviations_short if truncate_ranks else rank_abbreviations_full
-    
-    # Roman numerals for tiers
+
     roman_numerals_dict = {
         1: "I", 2: "II", 3: "III"
     }
-    
-    # Color values for each rank
+
     color_values = {
-        3: (72, 69, 62),    # Iron - gray
-        4: (72, 69, 62),
-        5: (72, 69, 62),
-        6: (187, 143, 90),  # Bronze - brown
-        7: (187, 143, 90),
-        8: (187, 143, 90),
-        9: (174, 178, 178), # Silver - silver
-        10: (174, 178, 178),
-        11: (174, 178, 178),
-        12: (197, 186, 63), # Gold - gold
-        13: (197, 186, 63),
-        14: (197, 186, 63),
-        15: (24, 167, 185), # Platinum - cyan
-        16: (24, 167, 185),
-        17: (24, 167, 185),
-        18: (216, 100, 199), # Diamond - magenta
-        19: (216, 100, 199),
-        20: (216, 100, 199),
-        21: (24, 148, 82),  # Ascendant - green
-        22: (24, 148, 82),
-        23: (24, 148, 82),
-        24: (221, 68, 68),  # Immortal - red
-        25: (221, 68, 68),
-        26: (221, 68, 68),
-        27: (255, 253, 205)  # Radiant - yellow
+        3: (72, 69, 62), 4: (72, 69, 62), 5: (72, 69, 62),
+        6: (187, 143, 90), 7: (187, 143, 90), 8: (187, 143, 90),
+        9: (174, 178, 178), 10: (174, 178, 178), 11: (174, 178, 178),
+        12: (197, 186, 63), 13: (197, 186, 63), 14: (197, 186, 63),
+        15: (24, 167, 185), 16: (24, 167, 185), 17: (24, 167, 185),
+        18: (216, 100, 199), 19: (216, 100, 199), 20: (216, 100, 199),
+        21: (24, 148, 82), 22: (24, 148, 82), 23: (24, 148, 82),
+        24: (221, 68, 68), 25: (221, 68, 68), 26: (221, 68, 68),
+        27: (255, 253, 205)
     }
-    
+
     if rank_number not in rank_abbreviations:
-        return f"- Unrated"
-    
-    # Calculate tier (1, 2, or 3)
+        return "- Unrated"
+
     tier = ((rank_number - 3) % 3) + 1
-    
-    # Get abbreviation and color values
+
     abbreviation = rank_abbreviations[rank_number]
     color_value = color_values[rank_number]
-    
-    # Create colored elements
+
     color_square = color("■", fore=color_value)
     colored_abbreviation = color(abbreviation, fore=color_value)
-    
-    # Radiant has only one tier, so omit tier number
+
     include_tier = rank_number != 27
     if include_tier:
         if roman_numerals:
@@ -328,8 +297,7 @@ def format_rank_with_square(rank_number, rr_value=0, is_peak_rank=False, config=
             colored_tier = color(str(tier), fore=color_value)
     else:
         colored_tier = ""
-    
-    # Format output strings
+
     if is_peak_rank:
         if include_tier:
             return f"{color_square} {colored_abbreviation:<12} {colored_tier:>3}"
